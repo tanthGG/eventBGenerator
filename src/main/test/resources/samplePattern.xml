@@ -1,0 +1,26 @@
+<Pattern name="PSensingUnit">
+  <Variables>
+    <Variable name="ctlSensedFlg" type="ND \ Dests → BOOL"/>
+    <Variable name="senseBuff" type="ND \ Dests → ℙ(Z)"/>
+  </Variables>
+  <Invariants>
+    <Invariant expression="ctlSensedFlg ∈ ND \ Dests → BOOL"/>
+    <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(Z)"/>
+  </Invariants>
+  <Events>
+    <Event name="sensing">
+      <Parameters>
+        <Param name="x" type="ND \ Dests"/>
+        <Param name="sf" type="BOOL"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="x ∈ ND \ Dests"/>
+        <Guard expression="sf ∈ BOOL"/>
+      </Guards>
+      <Actions>
+        <Action value="ctlSensedFlg(x) ≔ sf"/>
+        <Action value="senseBuff(x) ≔ senseBuff(x) ∪ {0}"/>
+      </Actions>
+    </Event>
+  </Events>
+</Pattern>
