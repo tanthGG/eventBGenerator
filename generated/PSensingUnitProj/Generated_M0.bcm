@@ -1,0 +1,60 @@
+machine PSensingUnit_M0
+sees PSensingUnit_C0
+
+variables
+  ctlSensedFlg
+  senseBuff
+
+invariants
+  @inv01 ctlSensedFlg ∈ ND \ Dests → BOOL
+  @inv02 senseBuff ∈ ND \ Dests → ℙ(Z)
+
+events
+  event INITIALISATION
+    then
+      @int01 ctlSensedFlg ≔ (ND \ Dests) × {FALSE}
+      @int02 senseBuff ≔ (ND \ Dests) × {∅}
+  end
+
+  event sensing
+    any x sf data
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 sf ∈ BOOL
+      @g03 data ∈ Z
+      @g04 x ∈ dom(ctlSensedFlg)
+      @g05 ctlSensedFlg(x) = FALSE
+    then
+      @a01 ctlSensedFlg(x) ≔ sf
+      @a02 senseBuff(x) ≔ senseBuff(x) ∪ {data}
+  end
+
+  event remove_senseBuff
+    any x pkt
+    where
+      @g01 pkt ∈ Z
+      @g02 x ∈ ND \ Dests
+      @g03 pkt ∈ senseBuff(x)
+    then
+      @a01 senseBuff(x) ≔ senseBuff(x) \ {pkt}
+      @a02 ctlSensedFlg(x) ≔ FALSE
+  end
+
+  event reset_sensed_flag
+    any x
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 ctlSensedFlg(x) = TRUE
+    then
+      @a01 ctlSensedFlg(x) ≔ FALSE
+  end
+
+  event check_type
+    any pkt ty
+    where
+      @g01 pkt ∈ PKT
+      @g02 ty ∈ TYPE
+      @g03 type(pkt) = ty
+  end
+
+end

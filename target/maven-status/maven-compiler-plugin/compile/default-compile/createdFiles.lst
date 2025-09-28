@@ -2,6 +2,7 @@ app/PatternModel$Invariant.class
 app/PatternDomParser.class
 app/RodinProjectService.class
 app/GenerationService.class
+app/PatternModel$Context.class
 app/PatternModel$Variable.class
 app/EventBMapper.class
 app/Main.class

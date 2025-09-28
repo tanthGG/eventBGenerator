@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="PDestBuffer_Bundle">
+
+  <!-- Context Definition -->
+  <Context name="Context_PDestBuffer">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="ND ⊆ ℕ"/>
+      <Axiom expression="finite(ND)"/>
+      <Axiom expression="Dests ⊆ ND"/>
+      <Axiom expression="finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <!-- Pattern Definition -->
+  <Pattern name="PDestBuffer" type="EventComponent" description="Destination buffer management pattern">
+    <ContextRef name="Context_PDestBuffer"/>
+
+    <Variables>
+      <Variable name="destBuff" type="Dests ↔ PKT"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="destBuff ∈ Dests ↔ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action var="destBuff" value="∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="record_destBuff">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ∈ Dests"/>
+          <Guard expression="x ↦ pkt ∉ destBuff"/>
+        </Guards>
+        <Actions>
+          <Action var="destBuff" value="destBuff ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="remove_destBuff">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ∈ Dests"/>
+          <Guard expression="x ↦ pkt ∈ destBuff"/>
+        </Guards>
+        <Actions>
+          <Action var="destBuff" value="destBuff \ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="is_In_Range_destBuff">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="pkt ∈ ran(destBuff)"/>
+        </Guards>
+        <Actions>
+          <Action var="skip" value=""/>
+        </Actions>
+      </Event>
+
+      <Event name="isNot_In_Range_destBuff">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="pkt ∉ ran(destBuff)"/>
+        </Guards>
+        <Actions>
+          <Action var="skip" value=""/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

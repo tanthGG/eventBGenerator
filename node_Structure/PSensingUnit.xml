@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="PSensingUnit_Bundle">
+
+  <Context name="Context_PSensingUnit">
+    <Sets>
+      <Set name="PKT"/>
+      <Set name="TYPE"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+      <Constant name="initialSrcAddr"/>
+      <Constant name="type"/>
+      <Constant name="DATA"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="ND ⊆ ℕ ∧ finite(ND)"/>
+      <Axiom expression="Dests ⊆ ND"/>
+      <Axiom expression="finite(PKT)"/>
+      <Axiom expression="initialSrcAddr ∈ PKT → ND"/>
+      <Axiom expression="DATA ∈ TYPE"/>
+      <Axiom expression="type ∈ PKT → TYPE"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="PSensingUnit" type="EventComponent" description="Sensing mechanism of a sensor node">
+    <ContextRef name="Context_PSensingUnit"/>
+
+    <Variables>
+      <Variable name="ctlSensedFlg" type="ND \ Dests → BOOL"/>
+      <Variable name="senseBuff" type="ND \ Dests → ℙ(Z)"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="ctlSensedFlg ∈ ND \ Dests → BOOL"/>
+      <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(Z)"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action var="ctlSensedFlg" value="(ND \ Dests) × {FALSE}"/>
+      <Action var="senseBuff" value="(ND \ Dests) × {∅}"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="sensing">
+        <Parameters>
+          <Param name="x" type="ND \ Dests"/>
+          <Param name="sf" type="BOOL"/>
+          <Param name="data" type="Z"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND \ Dests"/>
+          <Guard expression="sf ∈ BOOL"/>
+          <Guard expression="data ∈ Z"/>
+          <Guard expression="x ∈ dom(ctlSensedFlg)"/>
+          <Guard expression="ctlSensedFlg(x) = FALSE"/>
+        </Guards>
+        <Actions>
+          <Action var="ctlSensedFlg(x)" value="sf"/>
+          <Action var="senseBuff(x)" value="senseBuff(x) ∪ {data}"/>
+        </Actions>
+      </Event>
+
+      <Event name="remove_senseBuff">
+        <Parameters>
+          <Param name="x" type="ND \ Dests"/>
+          <Param name="pkt" type="Z"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND \ Dests"/>
+          <Guard expression="pkt ∈ senseBuff(x)"/>
+        </Guards>
+        <Actions>
+          <Action var="senseBuff(x)" value="senseBuff(x) \ {pkt}"/>
+          <Action var="ctlSensedFlg(x)" value="FALSE"/>
+        </Actions>
+      </Event>
+
+      <Event name="reset_sensed_flag">
+        <Parameters>
+          <Param name="x" type="ND \ Dests"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND \ Dests"/>
+          <Guard expression="ctlSensedFlg(x) = TRUE"/>
+        </Guards>
+        <Actions>
+          <Action var="ctlSensedFlg(x)" value="FALSE"/>
+        </Actions>
+      </Event>
+
+      <Event name="check_type">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+          <Param name="ty" type="TYPE"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="ty ∈ TYPE"/>
+          <Guard expression="type(pkt) = ty"/>
+        </Guards>
+        <Actions>
+          <Action var="skip" value=""/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

@@ -1,0 +1,93 @@
+machine PSend_M0
+sees PSend_C0
+
+variables
+  sentDown
+  sentUp
+  ctlNeighbours
+
+invariants
+  @inv01 sentUp ∈ ND ↔ PKT
+  @inv02 sentDown ∈ ND ↔ PKT
+  @inv03 ctlNeighbours ∈ PKT ↔ ND
+
+events
+  event INITIALISATION
+    then
+      @int01 sentUp ≔ ∅
+      @int02 sentDown ≔ ∅
+      @int03 ctlNeighbours ≔ ∅
+  end
+
+  event start_tx
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ sentDown
+    then
+      @a01 sentDown ≔ sentDown ∪ {x ↦ pkt}
+  end
+
+  event send_down
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ sentDown
+  end
+
+  event send_up
+    any x pkt nbrs
+    where
+      @g01 nbrs ∈ ℙ(ND)
+      @g02 x ∈ ND
+      @g03 pkt ∈ PKT
+      @g04 nbrs ∈ ℙ(ND) ∧ nbrs ≠ ∅
+      @g05 pkt ∉ dom(ctlNeighbours)
+      @g06 x ↦ pkt ∉ sentUp
+      @g07 x ↦ pkt ∈ sentDown
+    then
+      @a01 ctlNeighbours ≔ ctlNeighbours ∪ ({pkt} × nbrs)
+      @a02 sentDown ≔ sentDown \ {x ↦ pkt}
+      @a03 sentUp ≔ sentUp ∪ {x ↦ pkt}
+  end
+
+  event remove_ctlNeighbours
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ sentUp
+      @g04 x ↦ pkt ∈ sentDown
+      @g05 pkt ↦ x ∈ ctlNeighbours
+    then
+      @a01 ctlNeighbours ≔ ctlNeighbours \ {pkt ↦ x}
+  end
+
+  event finish_tx_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 {pkt} ◁ ctlNeighbours = ∅
+      @g04 pkt ∈ ran(sentUp)
+      @g05 pkt ∉ ran(sentDown)
+      @g06 x ∈ dom(sentUp)
+      @g07 x ↦ pkt ∈ sentUp
+    then
+      @a01 sentUp ≔ sentUp \ {x ↦ pkt}
+  end
+
+  event final_tx_pkts
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 {pkt} ◁ ctlNeighbours = ∅
+      @g03 pkt ∈ ran(sentUp)
+      @g04 pkt ∉ ran(sentDown)
+    then
+      @a01 sentUp ≔ sentUp ⩤ {pkt}
+  end
+
+end

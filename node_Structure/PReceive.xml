@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="PReceive_Bundle">
+
+  <!-- Context Definition -->
+  <Context name="Context_PReceive">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="ND ⊆ ℕ"/>
+      <Axiom expression="finite(ND)"/>
+      <Axiom expression="Dests ⊆ ND"/>
+      <Axiom expression="finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <!-- Pattern Definition -->
+  <Pattern name="PReceive" type="EventComponent" description="Receive operation pattern">
+    <ContextRef name="Context_PReceive"/>
+
+    <Variables>
+      <Variable name="recvBuff" type="ND ↔ PKT"/>
+      <Variable name="clrRecvBuffFlg" type="ND ↔ PKT"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="recvBuff ∈ ND ↔ PKT"/>
+      <Invariant expression="clrRecvBuffFlg ∈ ND ↔ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action var="recvBuff" value="∅"/>
+      <Action var="clrRecvBuffFlg" value="∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="receive">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∉ recvBuff"/>
+        </Guards>
+        <Actions>
+          <Action var="recvBuff" value="recvBuff ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="fwdr_receive_pkts">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∈ recvBuff"/>
+          <Guard expression="x ↦ pkt ∉ clrRecvBuffFlg"/>
+          <Guard expression="x ∉ Dests"/>
+        </Guards>
+        <Actions>
+          <Action var="clrRecvBuffFlg" value="clrRecvBuffFlg ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="dest_recv_pkts">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∈ recvBuff"/>
+          <Guard expression="x ∈ Dests"/>
+          <Guard expression="x ↦ pkt ∉ clrRecvBuffFlg"/>
+        </Guards>
+        <Actions>
+          <Action var="clrRecvBuffFlg" value="clrRecvBuffFlg ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="clear_recvdBuff">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∈ recvBuff"/>
+          <Guard expression="x ↦ pkt ∈ clrRecvBuffFlg"/>
+        </Guards>
+        <Actions>
+          <Action var="recvBuff" value="recvBuff \ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

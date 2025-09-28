@@ -1,0 +1,64 @@
+machine PReceive_M0
+sees PReceive_C0
+
+variables
+  recvBuff
+  clrRecvBuffFlg
+
+invariants
+  @inv01 recvBuff ∈ ND ↔ PKT
+  @inv02 clrRecvBuffFlg ∈ ND ↔ PKT
+
+events
+  event INITIALISATION
+    then
+      @int01 recvBuff ≔ ∅
+      @int02 clrRecvBuffFlg ≔ ∅
+  end
+
+  event receive
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ recvBuff
+    then
+      @a01 recvBuff ≔ recvBuff ∪ {x ↦ pkt}
+  end
+
+  event fwdr_receive_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∉ clrRecvBuffFlg
+      @g05 x ∉ Dests
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+  end
+
+  event dest_recv_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ∈ Dests
+      @g05 x ↦ pkt ∉ clrRecvBuffFlg
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+  end
+
+  event clear_recvdBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @a01 recvBuff ≔ recvBuff \ {x ↦ pkt}
+  end
+
+end

@@ -1,0 +1,15 @@
+context PDestBuffer_C0
+sets
+  PKT
+
+constants
+  ND
+  Dests
+
+axioms
+  @ax01 ND ⊆ ℕ
+  @ax02 finite(ND)
+  @ax03 Dests ⊆ ND
+  @ax04 finite(PKT)
+
+end

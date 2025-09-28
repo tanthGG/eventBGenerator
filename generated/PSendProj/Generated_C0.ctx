@@ -1,0 +1,13 @@
+context PSend_C0
+sets
+  PKT
+
+constants
+  ND
+
+axioms
+  @ax01 ND ⊆ ℕ
+  @ax02 finite(ND)
+  @ax03 finite(PKT)
+
+end

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="PSend_Bundle">
+
+  <Context name="Context_PSend">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="ND ⊆ ℕ"/>
+      <Axiom expression="finite(ND)"/>
+      <Axiom expression="finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="PSend" type="EventComponent" description="Send operation pattern">
+    <ContextRef name="Context_PSend"/>
+
+    <Variables>
+      <Variable name="sentDown" type="ND ↔ PKT"/>
+      <Variable name="sentUp" type="ND ↔ PKT"/>
+      <Variable name="ctlNeighbours" type="PKT ↔ ND"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="sentUp ∈ ND ↔ PKT"/>
+      <Invariant expression="sentDown ∈ ND ↔ PKT"/>
+      <Invariant expression="ctlNeighbours ∈ PKT ↔ ND"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action var="sentUp" value="∅"/>
+      <Action var="sentDown" value="∅"/>
+      <Action var="ctlNeighbours" value="∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="start_tx">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∉ sentDown"/>
+        </Guards>
+        <Actions>
+          <Action var="sentDown" value="sentDown ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="send_down">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∈ sentDown"/>
+        </Guards>
+        <Actions>
+          <Action var="skip" value=""/>
+        </Actions>
+      </Event>
+
+      <Event name="send_up">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="nbrs" type="ℙ(ND)"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="nbrs ∈ ℙ(ND) ∧ nbrs ≠ ∅"/>
+          <Guard expression="pkt ∉ dom(ctlNeighbours)"/>
+          <Guard expression="x ↦ pkt ∉ sentUp"/>
+          <Guard expression="x ↦ pkt ∈ sentDown"/>
+        </Guards>
+        <Actions>
+          <Action var="ctlNeighbours" value="ctlNeighbours ∪ ({pkt} × nbrs)"/>
+          <Action var="sentDown" value="sentDown \ {x ↦ pkt}"/>
+          <Action var="sentUp" value="sentUp ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="remove_ctlNeighbours">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="x ↦ pkt ∉ sentUp"/>
+          <Guard expression="x ↦ pkt ∈ sentDown"/>
+          <Guard expression="pkt ↦ x ∈ ctlNeighbours"/>
+        </Guards>
+        <Actions>
+          <Action var="ctlNeighbours" value="ctlNeighbours \ {pkt ↦ x}"/>
+        </Actions>
+      </Event>
+
+      <Event name="finish_tx_pkts">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="{pkt} ◁ ctlNeighbours = ∅"/>
+          <Guard expression="pkt ∈ ran(sentUp)"/>
+          <Guard expression="pkt ∉ ran(sentDown)"/>
+          <Guard expression="x ∈ dom(sentUp)"/>
+          <Guard expression="x ↦ pkt ∈ sentUp"/>
+        </Guards>
+        <Actions>
+          <Action var="sentUp" value="sentUp \ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="final_tx_pkts">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="{pkt} ◁ ctlNeighbours = ∅"/>
+          <Guard expression="pkt ∈ ran(sentUp)"/>
+          <Guard expression="pkt ∉ ran(sentDown)"/>
+        </Guards>
+        <Actions>
+          <Action var="sentUp" value="sentUp ⩤ {pkt}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

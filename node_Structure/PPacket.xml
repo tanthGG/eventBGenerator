@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="PPacket_Bundle">
+
+  <Context name="Context_PPacket">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+      <Constant name="initialSrcAddr"/>
+      <Constant name="finalDestAddr"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="finalDestAddr ∈ ℙ(PKT × Z)"/>
+      <Axiom expression="ND ⊆ N"/>
+      <Axiom expression="finite(ND)"/>
+      <Axiom expression="Dests ⊆ ND"/>
+      <Axiom expression="finite(PKT)"/>
+      <Axiom expression="initialSrcAddr ∈ PKT → ND"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="PPacket" type="EventComponent" description="Packet management pattern">
+    <ContextRef name="Context_PPacket"/>
+
+    <Variables>
+      <Variable name="pktFwdr" type="PKT → ND"/>
+      <Variable name="pktData" type="PKT → Z"/>
+      <Variable name="createdPkts" type="ℙ(PKT)"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="pktFwdr ∈ PKT → ND"/>
+      <Invariant expression="pktData ∈ PKT → Z"/>
+      <Invariant expression="createdPkts ⊆ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action var="pktFwdr" value="∅"/>
+      <Action var="pktData" value="∅"/>
+      <Action var="createdPkts" value="∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="creating_Pkt">
+        <Parameters>
+          <Param name="x" type="ND \ Dests"/>
+          <Param name="des"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="data" type="Z"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND \ Dests"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="data ∈ Z"/>
+          <Guard expression="x = initialSrcAddr(pkt)"/>
+          <Guard expression="des = ran({pkt} ◁ finalDestAddr)"/>
+          <Guard expression="pkt ∉ dom(pktFwdr)"/>
+          <Guard expression="pkt ∉ dom(pktData)"/>
+        </Guards>
+        <Actions>
+          <Action var="createdPkts" value="createdPkts ∪ {pkt}"/>
+          <Action var="pktFwdr" value="pktFwdr ∪ {pkt ↦ x}"/>
+          <Action var="pktData" value="pktData ∪ {pkt ↦ data}"/>
+        </Actions>
+      </Event>
+
+      <Event name="set_pktFwdr">
+        <Parameters>
+          <Param name="x" type="ND"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="x ∈ ND"/>
+          <Guard expression="pkt ∈ PKT"/>
+          <Guard expression="pkt ∈ dom(pktFwdr)"/>
+        </Guards>
+        <Actions>
+          <Action var="pktFwdr" value="pktFwdr ⩤ {pkt ↦ x}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>
