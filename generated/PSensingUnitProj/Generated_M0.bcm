@@ -7,7 +7,7 @@ variables
 
 invariants
   @inv01 ctlSensedFlg ∈ ND \ Dests → BOOL
-  @inv02 senseBuff ∈ ND \ Dests → ℙ(Z)
+  @inv02 senseBuff ∈ ND \ Dests → ℙ(ℤ)
 
 events
   event INITIALISATION
@@ -21,7 +21,7 @@ events
     where
       @g01 x ∈ ND \ Dests
       @g02 sf ∈ BOOL
-      @g03 data ∈ Z
+      @g03 data ∈ ℤ
       @g04 x ∈ dom(ctlSensedFlg)
       @g05 ctlSensedFlg(x) = FALSE
     then
@@ -32,7 +32,7 @@ events
   event remove_senseBuff
     any x pkt
     where
-      @g01 pkt ∈ Z
+      @g01 pkt ∈ ℤ
       @g02 x ∈ ND \ Dests
       @g03 pkt ∈ senseBuff(x)
     then

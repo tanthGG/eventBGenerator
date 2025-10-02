@@ -7,8 +7,8 @@ variables
   createdPkts
 
 invariants
-  @inv01 pktFwdr ∈ PKT → ND
-  @inv02 pktData ∈ PKT → Z
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
   @inv03 createdPkts ⊆ PKT
 
 events
@@ -24,7 +24,7 @@ events
     where
       @g01 x ∈ ND \ Dests
       @g02 pkt ∈ PKT
-      @g03 data ∈ Z
+      @g03 data ∈ ℤ
       @g04 x = initialSrcAddr(pkt)
       @g05 des = ran({pkt} ◁ finalDestAddr)
       @g06 pkt ∉ dom(pktFwdr)
@@ -42,7 +42,7 @@ events
       @g02 pkt ∈ PKT
       @g03 pkt ∈ dom(pktFwdr)
     then
-      @a01 pktFwdr ≔ pktFwdr ⩤ {pkt ↦ x}
+      @a01 pktFwdr ≔ pktFwdr <+ {pkt ↦ x}
   end
 
 end

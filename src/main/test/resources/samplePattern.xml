@@ -1,11 +1,11 @@
 <Pattern name="PSensingUnit">
   <Variables>
     <Variable name="ctlSensedFlg" type="ND \ Dests → BOOL"/>
-    <Variable name="senseBuff" type="ND \ Dests → ℙ(Z)"/>
+    <Variable name="senseBuff" type="ND \ Dests → ℙ(ℤ)"/>
   </Variables>
   <Invariants>
     <Invariant expression="ctlSensedFlg ∈ ND \ Dests → BOOL"/>
-    <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(Z)"/>
+    <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(ℤ)"/>
   </Invariants>
   <Events>
     <Event name="sensing">

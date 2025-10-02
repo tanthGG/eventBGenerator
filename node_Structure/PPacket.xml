@@ -14,8 +14,8 @@
     </Constants>
 
     <Axioms>
-      <Axiom expression="finalDestAddr ∈ ℙ(PKT × Z)"/>
-      <Axiom expression="ND ⊆ N"/>
+      <Axiom expression="finalDestAddr ∈ ℙ(PKT × ℤ)"/>
+      <Axiom expression="ND ⊆ ℕ"/>
       <Axiom expression="finite(ND)"/>
       <Axiom expression="Dests ⊆ ND"/>
       <Axiom expression="finite(PKT)"/>
@@ -27,14 +27,14 @@
     <ContextRef name="Context_PPacket"/>
 
     <Variables>
-      <Variable name="pktFwdr" type="PKT → ND"/>
-      <Variable name="pktData" type="PKT → Z"/>
+      <Variable name="pktFwdr" type="PKT ⇸ ND"/>
+      <Variable name="pktData" type="PKT ⇸ ℤ"/>
       <Variable name="createdPkts" type="ℙ(PKT)"/>
     </Variables>
 
     <Invariants>
-      <Invariant expression="pktFwdr ∈ PKT → ND"/>
-      <Invariant expression="pktData ∈ PKT → Z"/>
+      <Invariant expression="pktFwdr ∈ PKT ⇸ ND"/>
+      <Invariant expression="pktData ∈ PKT ⇸ ℤ"/>
       <Invariant expression="createdPkts ⊆ PKT"/>
     </Invariants>
 
@@ -50,12 +50,12 @@
           <Param name="x" type="ND \ Dests"/>
           <Param name="des"/>
           <Param name="pkt" type="PKT"/>
-          <Param name="data" type="Z"/>
+          <Param name="data" type="ℤ"/>
         </Parameters>
         <Guards>
           <Guard expression="x ∈ ND \ Dests"/>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="data ∈ Z"/>
+          <Guard expression="data ∈ ℤ"/>
           <Guard expression="x = initialSrcAddr(pkt)"/>
           <Guard expression="des = ran({pkt} ◁ finalDestAddr)"/>
           <Guard expression="pkt ∉ dom(pktFwdr)"/>
@@ -79,7 +79,7 @@
           <Guard expression="pkt ∈ dom(pktFwdr)"/>
         </Guards>
         <Actions>
-          <Action var="pktFwdr" value="pktFwdr ⩤ {pkt ↦ x}"/>
+          <Action var="pktFwdr" value="pktFwdr &lt;+ {pkt ↦ x}"/>
         </Actions>
       </Event>
     </Events>

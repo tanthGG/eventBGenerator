@@ -30,12 +30,12 @@
 
     <Variables>
       <Variable name="ctlSensedFlg" type="ND \ Dests → BOOL"/>
-      <Variable name="senseBuff" type="ND \ Dests → ℙ(Z)"/>
+      <Variable name="senseBuff" type="ND \ Dests → ℙ(ℤ)"/>
     </Variables>
 
     <Invariants>
       <Invariant expression="ctlSensedFlg ∈ ND \ Dests → BOOL"/>
-      <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(Z)"/>
+      <Invariant expression="senseBuff ∈ ND \ Dests → ℙ(ℤ)"/>
     </Invariants>
 
     <Initialisation>
@@ -48,12 +48,12 @@
         <Parameters>
           <Param name="x" type="ND \ Dests"/>
           <Param name="sf" type="BOOL"/>
-          <Param name="data" type="Z"/>
+          <Param name="data" type="ℤ"/>
         </Parameters>
         <Guards>
           <Guard expression="x ∈ ND \ Dests"/>
           <Guard expression="sf ∈ BOOL"/>
-          <Guard expression="data ∈ Z"/>
+          <Guard expression="data ∈ ℤ"/>
           <Guard expression="x ∈ dom(ctlSensedFlg)"/>
           <Guard expression="ctlSensedFlg(x) = FALSE"/>
         </Guards>
@@ -66,7 +66,7 @@
       <Event name="remove_senseBuff">
         <Parameters>
           <Param name="x" type="ND \ Dests"/>
-          <Param name="pkt" type="Z"/>
+          <Param name="pkt" type="ℤ"/>
         </Parameters>
         <Guards>
           <Guard expression="x ∈ ND \ Dests"/>

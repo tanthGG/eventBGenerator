@@ -1,12 +1,12 @@
 <Pattern name="PReceiveUnit">
   <Variables>
     <Variable name="ctlRecvFlg" type="ND \ Dests → BOOL"/>
-    <Variable name="inBuff"     type="ND \ Dests → ℙ(Z)"/>
+    <Variable name="inBuff"     type="ND \ Dests → ℙ(ℤ)"/>
   </Variables>
 
   <Invariants>
     <Invariant expression="ctlRecvFlg ∈ ND \ Dests → BOOL"/>
-    <Invariant expression="inBuff ∈ ND \ Dests → ℙ(Z)"/>
+    <Invariant expression="inBuff ∈ ND \ Dests → ℙ(ℤ)"/>
   </Invariants>
 
   <Events>
