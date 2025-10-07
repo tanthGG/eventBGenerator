@@ -8,22 +8,22 @@ public class Main {
       System.out.println("Usage: -i <pattern.xml> -p <ProjectName> -o <WorkspacePath>");
       return;
     }
-    Path xml = null, workspace = null; String projectName = null;
+    Path patternXml = null, workspacePath = null;
+    String projectName = null;
     for (int i=0;i<args.length;i++) {
       switch (args[i]) {
-        case "-i": xml = Paths.get(args[++i]); break;
+        case "-i": patternXml = Paths.get(args[++i]); break;
         case "-p": projectName = args[++i]; break;
-        case "-o": workspace = Paths.get(args[++i]); break;
+        case "-o": workspacePath = Paths.get(args[++i]); break;
       }
     }
-    GenerationService svc = new GenerationService(
+    GenerationService generationService = new GenerationService(
       new PatternDomParser(),
       new EventBMapper(),
       new EventBWriter(),
-      new PatternGrammarWriter(),
-      new RodinProjectService(workspace)
+      new RodinProjectService(workspacePath)
     );
-    svc.generate(xml, projectName, ReqSpec.empty());
-    System.out.println("Generated in: " + workspace.resolve(projectName));
+    generationService.generate(patternXml, projectName, ReqSpec.empty());
+    System.out.println("Generated in: " + workspacePath.resolve(projectName));
   }
 }
