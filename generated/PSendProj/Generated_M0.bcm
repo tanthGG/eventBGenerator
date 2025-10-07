@@ -87,7 +87,7 @@ events
       @g03 pkt ∈ ran(sentUp)
       @g04 pkt ∉ ran(sentDown)
     then
-      @a01 sentUp ≔ sentUp ⩤ {pkt}
+      @a01 sentUp ≔ sentUp ⩥ {pkt}
   end
 
 end

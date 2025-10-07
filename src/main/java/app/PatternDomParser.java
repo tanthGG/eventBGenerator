@@ -11,6 +11,8 @@ import java.util.*;
 /** DOM parser for Pattern XML → PatternModel. */
 public class PatternDomParser {
 
+  private final PatternGrammarValidator grammarValidator = new PatternGrammarValidator();
+
   public PatternModel parse(Path xmlPath) throws Exception {
     DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
     f.setNamespaceAware(true);
@@ -25,6 +27,7 @@ public class PatternDomParser {
 
       String tag = root.getTagName();
       if ("PatternBundle".equals(tag)) {
+        grammarValidator.validateBundle(root);
         return parseBundle(root);
       } else if ("Pattern".equals(tag)) {
         return parseLegacyPattern(root);
@@ -325,23 +328,40 @@ public class PatternDomParser {
       Element aEl = (Element) n;
       PatternModel.Action a = new PatternModel.Action();
 
-      String lhs = attr(aEl, "var");
-      String rhsAttr = attr(aEl, "value");
-      String rhs = (rhsAttr != null) ? rhsAttr : textOr(aEl, "");
+      String singleVar = attr(aEl, "var");
+      String singleValueAttr = attr(aEl, "value");
+      String multiVars = attr(aEl, "vars");
+      String multiValues = attr(aEl, "values");
+      String text = textOr(aEl, "");
 
-      String assignment;
-      if (lhs != null && !lhs.isBlank() && !"skip".equalsIgnoreCase(lhs)) {
-        String right = (rhs == null || rhs.isBlank()) ? "skip" : rhs;
-        assignment = lhs + " ≔ " + right;
-      } else if (lhs != null && "skip".equalsIgnoreCase(lhs)) {
-        assignment = "skip";
-      } else if (rhs != null && !rhs.isBlank()) {
-        assignment = rhs;
+      String assignment = null;
+
+      if (multiVars != null && !multiVars.isBlank()) {
+        String lhs = multiVars.trim();
+        String rhs = (multiValues != null && !multiValues.isBlank()) ? multiValues : (text.isBlank() ? null : text);
+        if (!lhs.isEmpty() && rhs != null && !rhs.isBlank()) {
+          assignment = lhs + " ≔ " + rhs;
+        }
+      } else if (singleVar != null && !singleVar.isBlank()) {
+        String varName = singleVar.trim();
+        if (!varName.isEmpty() && !"skip".equalsIgnoreCase(varName)) {
+          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+          if (rhs == null || rhs.isBlank()) rhs = "skip";
+          assignment = varName + " ≔ " + rhs;
+        } else {
+          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+          if (rhs != null && !rhs.isBlank() && !rhs.trim().equalsIgnoreCase("skip")) {
+            assignment = rhs;
+          }
+        }
       } else {
-        assignment = "skip";
+        String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+        if (rhs != null && !rhs.isBlank()) {
+          assignment = rhs;
+        }
       }
 
-      if (assignment.trim().equalsIgnoreCase("skip")) continue;
+      if (assignment == null || assignment.trim().equalsIgnoreCase("skip")) continue;
 
       a.assignment = assignment;
       target.add(a);

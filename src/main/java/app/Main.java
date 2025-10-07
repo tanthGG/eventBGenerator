@@ -20,6 +20,7 @@ public class Main {
       new PatternDomParser(),
       new EventBMapper(),
       new EventBWriter(),
+      new PatternGrammarWriter(),
       new RodinProjectService(workspace)
     );
     svc.generate(xml, projectName, ReqSpec.empty());
