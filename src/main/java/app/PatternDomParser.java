@@ -11,8 +11,6 @@ import java.util.*;
 /** DOM parser for Pattern XML → PatternModel. */
 public class PatternDomParser {
 
-  private final PatternGrammarValidator grammarValidator = new PatternGrammarValidator();
-
   public PatternModel parse(Path xmlPath) throws Exception {
     DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
     f.setNamespaceAware(true);
@@ -27,7 +25,6 @@ public class PatternDomParser {
 
       String tag = root.getTagName();
       if ("PatternBundle".equals(tag)) {
-        grammarValidator.validateBundle(root);
         return parseBundle(root);
       } else if ("Pattern".equals(tag)) {
         return parseLegacyPattern(root);

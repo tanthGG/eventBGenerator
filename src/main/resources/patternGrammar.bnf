@@ -92,7 +92,7 @@ Eq                ::= S? "=" S?
 <NameStart>       ::= "_" | ":" | [A-Z] | [a-z]
 <NameChar>        ::= <NameStart> | [0-9] | "-" | "."
 
-<Text>            ::= (<NoQuote>)*                /* use &quot; if you need a literal " */
+<Text>            ::= (<NoQuote>)               
 <CharData>        ::= (#x09 | #x0A | #x0D | #x20-#x7E | #x80-#x10FFFF)*
 <NoQuote>         ::= (#x20-#x21 | #x23-#x7E | #x80-#x10FFFF)
 
