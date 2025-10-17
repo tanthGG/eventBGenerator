@@ -1,41 +1,41 @@
-machine PPacket_Composite_M0
-sees PPacket_Composite_C0
+machine PSend_Composite_M0
+sees PSend_Composite_C0
 
 variables
-  pktFwdr
-  pktData
-  createdPkts
   sentDown
   sentUp
   ctlNeighbours
   recvBuff
   clrRecvBuffFlg
+  pktFwdr
+  pktData
+  createdPkts
   ndBuff
   destBuff
 
 invariants
-  @inv01 pktFwdr ∈ PKT ⇸ ND
-  @inv02 pktData ∈ PKT ⇸ ℤ
-  @inv03 createdPkts ⊆ PKT
-  @inv04 sentUp ∈ ND ↔ PKT
-  @inv05 sentDown ∈ ND ↔ PKT
-  @inv06 ctlNeighbours ∈ PKT ↔ ND
-  @inv07 recvBuff ∈ ND ↔ PKT
-  @inv08 clrRecvBuffFlg ∈ ND ↔ PKT
+  @inv01 sentUp ∈ ND ↔ PKT
+  @inv02 sentDown ∈ ND ↔ PKT
+  @inv03 ctlNeighbours ∈ PKT ↔ ND
+  @inv04 recvBuff ∈ ND ↔ PKT
+  @inv05 clrRecvBuffFlg ∈ ND ↔ PKT
+  @inv06 pktFwdr ∈ PKT ⇸ ND
+  @inv07 pktData ∈ PKT ⇸ ℤ
+  @inv08 createdPkts ⊆ PKT
   @inv09 ndBuff ∈ ND ↔ PKT
   @inv10 destBuff ∈ Dests ↔ PKT
 
 events
   event INITIALISATION
     then
-      @int01 pktFwdr ≔ ∅
-      @int02 pktData ≔ ∅
-      @int03 createdPkts ≔ ∅
-      @int04 sentUp ≔ ∅
-      @int05 sentDown ≔ ∅
-      @int06 ctlNeighbours ≔ ∅
-      @int07 recvBuff ≔ ∅
-      @int08 clrRecvBuffFlg ≔ ∅
+      @int01 sentUp ≔ ∅
+      @int02 sentDown ≔ ∅
+      @int03 ctlNeighbours ≔ ∅
+      @int04 recvBuff ≔ ∅
+      @int05 clrRecvBuffFlg ≔ ∅
+      @int06 pktFwdr ≔ ∅
+      @int07 pktData ≔ ∅
+      @int08 createdPkts ≔ ∅
       @int09 ndBuff ≔ ∅
       @int10 destBuff ≔ ∅
   end
