@@ -115,6 +115,7 @@ public class PatternDomParser {
     if (initEl != null) {
       PatternModel.Event initEvt = new PatternModel.Event();
       initEvt.name = "Initialisation";
+      initEvt.sourcePattern = model.name;
       parseActions(initEl, initEvt.actions);
       model.events.add(initEvt);
     }
@@ -129,6 +130,7 @@ public class PatternDomParser {
         Element eventEl = (Element) n;
         PatternModel.Event evt = new PatternModel.Event();
         evt.name = attrOr(eventEl, "name", "event" + (model.events.size() + 1));
+        evt.sourcePattern = model.name;
 
         Element paramsEl = child(eventEl, "Parameters");
         if (paramsEl != null) {
@@ -171,6 +173,7 @@ public class PatternDomParser {
     if (model.events.stream().noneMatch(e -> "Initialisation".equalsIgnoreCase(e.name))) {
       PatternModel.Event initEvt = new PatternModel.Event();
       initEvt.name = "Initialisation";
+      initEvt.sourcePattern = model.name;
       model.events.add(0, initEvt);
     }
 
@@ -220,6 +223,7 @@ public class PatternDomParser {
         Element evtEl = (Element) events.item(i);
         PatternModel.Event evt = new PatternModel.Event();
         evt.name = attrOr(evtEl, "name", "event" + (i + 1));
+        evt.sourcePattern = model.name;
 
         Element paramsEl = child(evtEl, "Parameters");
         if (paramsEl != null) {

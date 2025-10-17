@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event-B Pattern Composer</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Event-B Pattern Composer</h1>
+    <p>Select one or more node patterns to generate a combined Event-B artefact.</p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Available Patterns</h2>
+      <div id="pattern-list" class="pattern-list"></div>
+    </section>
+
+    <section class="actions">
+      <button id="generate-btn" disabled>Generate Event-B Bundle</button>
+      <span id="status" class="status"></span>
+    </section>
+  </main>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

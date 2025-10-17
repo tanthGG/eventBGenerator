@@ -21,6 +21,7 @@ public class PatternModel {
 
   public static class Event {
     public String name;
+    public String sourcePattern;
     public final List<Param> params = new ArrayList<>();
     public final List<Guard> guards = new ArrayList<>();
     public final List<Action> actions = new ArrayList<>();

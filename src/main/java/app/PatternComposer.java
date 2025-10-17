@@ -5,6 +5,8 @@ import java.util.*;
 /** Combines multiple PatternModel instances into a single merged model. */
 public class PatternComposer {
 
+  private final PatternCombinationEngine combinationEngine = new PatternCombinationEngine();
+
   public PatternModel compose(List<PatternModel> models) {
     if (models == null || models.isEmpty()) {
       throw new IllegalArgumentException("At least one pattern model is required for composition");
@@ -95,10 +97,10 @@ public class PatternComposer {
   private void mergeEvents(List<PatternModel> models, PatternModel target) {
     PatternModel.Event initEvent = new PatternModel.Event();
     initEvent.name = "Initialisation";
+    initEvent.sourcePattern = "Composite";
     LinkedHashSet<String> initAssignments = new LinkedHashSet<>();
 
-    Map<String, PatternModel.Event> eventsByName = new LinkedHashMap<>();
-    Set<String> lowerCaseNames = new HashSet<>();
+    List<PatternModel.Event> collectedEvents = new ArrayList<>();
 
     for (PatternModel model : models) {
       if (model == null) continue;
@@ -118,25 +120,43 @@ public class PatternComposer {
         }
 
         PatternModel.Event copy = copyEvent(event);
-        String baseName = copy.name;
-        String key = baseName.toLowerCase(Locale.ROOT);
-        PatternModel.Event existing = eventsByName.get(baseName);
-        if (existing != null) {
-          if (eventsEquivalent(existing, copy)) {
-            continue;
-          }
+        if (copy.sourcePattern == null || copy.sourcePattern.isBlank()) {
+          copy.sourcePattern = model.name;
         }
-        if (!lowerCaseNames.add(key)) {
-          int suffix = 2;
-          String candidate;
-          do {
-            candidate = baseName + "_" + suffix++;
-            key = candidate.toLowerCase(Locale.ROOT);
-          } while (!lowerCaseNames.add(key));
-          copy.name = candidate;
-        }
-        eventsByName.put(copy.name, copy);
+        collectedEvents.add(copy);
       }
+    }
+
+    List<PatternModel.Event> processedEvents = combinationEngine.apply(collectedEvents);
+
+    Map<String, PatternModel.Event> eventsByName = new LinkedHashMap<>();
+    Set<String> lowerCaseNames = new HashSet<>();
+
+    for (PatternModel.Event event : processedEvents) {
+      if (event == null || event.name == null) continue;
+      String baseName = event.name.trim();
+      if (baseName.isEmpty()) continue;
+
+      PatternModel.Event existing = eventsByName.get(baseName);
+      if (existing != null && eventsEquivalent(existing, event)) {
+        continue;
+      }
+
+      String candidate = baseName;
+      String lower = candidate.toLowerCase(Locale.ROOT);
+      if (lowerCaseNames.contains(lower)) {
+        int suffix = 2;
+        do {
+          candidate = baseName + "_" + suffix++;
+          lower = candidate.toLowerCase(Locale.ROOT);
+        } while (lowerCaseNames.contains(lower));
+      }
+      lowerCaseNames.add(lower);
+
+      if (!candidate.equals(event.name)) {
+        event.name = candidate;
+      }
+      eventsByName.put(event.name, event);
     }
 
     target.events.add(initEvent);
@@ -146,6 +166,7 @@ public class PatternComposer {
   private PatternModel.Event copyEvent(PatternModel.Event source) {
     PatternModel.Event copy = new PatternModel.Event();
     copy.name = source.name;
+    copy.sourcePattern = source.sourcePattern;
     for (PatternModel.Param param : source.params) {
       PatternModel.Param p = new PatternModel.Param();
       p.name = param.name;
@@ -194,4 +215,3 @@ public class PatternComposer {
     return true;
   }
 }
-
