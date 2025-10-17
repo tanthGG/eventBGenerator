@@ -1,0 +1,104 @@
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #f5f7fa;
+  color: #1f2933;
+}
+
+header {
+  background: #2f5ed7;
+  color: #fff;
+  padding: 2rem;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+main {
+  max-width: 720px;
+  margin: 2rem auto;
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.1);
+}
+
+h1 {
+  margin: 0 0 0.5rem 0;
+}
+
+h2 {
+  margin-top: 0;
+  font-size: 1.3rem;
+}
+
+.pattern-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.pattern-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #d7e0f5;
+  border-radius: 8px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #f9fbff;
+}
+
+.pattern-item:hover {
+  border-color: #2f5ed7;
+  box-shadow: 0 6px 14px rgba(47, 94, 215, 0.15);
+}
+
+.pattern-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.actions {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+#generate-btn {
+  background: #2f5ed7;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.8rem 1.4rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+#generate-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(47, 94, 215, 0.2);
+}
+
+#generate-btn:disabled {
+  background: #9aa8d8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.status {
+  min-height: 1.5rem;
+  font-size: 0.95rem;
+  color: #2f5ed7;
+}
+
+.status.error {
+  color: #d64545;
+}

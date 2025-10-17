@@ -137,7 +137,7 @@
           <Guard expression="pkt ∉ ran(sentDown)"/>
         </Guards>
         <Actions>
-          <Action var="sentUp" value="sentUp ⩤ {pkt}"/>
+          <Action var="sentUp" value="sentUp ⩥ {pkt}"/>
         </Actions>
       </Event>
     </Events>

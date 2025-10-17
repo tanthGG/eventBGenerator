@@ -115,6 +115,7 @@ public class PatternDomParser {
     if (initEl != null) {
       PatternModel.Event initEvt = new PatternModel.Event();
       initEvt.name = "Initialisation";
+      initEvt.sourcePattern = model.name;
       parseActions(initEl, initEvt.actions);
       model.events.add(initEvt);
     }
@@ -129,6 +130,7 @@ public class PatternDomParser {
         Element eventEl = (Element) n;
         PatternModel.Event evt = new PatternModel.Event();
         evt.name = attrOr(eventEl, "name", "event" + (model.events.size() + 1));
+        evt.sourcePattern = model.name;
 
         Element paramsEl = child(eventEl, "Parameters");
         if (paramsEl != null) {
@@ -171,6 +173,7 @@ public class PatternDomParser {
     if (model.events.stream().noneMatch(e -> "Initialisation".equalsIgnoreCase(e.name))) {
       PatternModel.Event initEvt = new PatternModel.Event();
       initEvt.name = "Initialisation";
+      initEvt.sourcePattern = model.name;
       model.events.add(0, initEvt);
     }
 
@@ -220,6 +223,7 @@ public class PatternDomParser {
         Element evtEl = (Element) events.item(i);
         PatternModel.Event evt = new PatternModel.Event();
         evt.name = attrOr(evtEl, "name", "event" + (i + 1));
+        evt.sourcePattern = model.name;
 
         Element paramsEl = child(evtEl, "Parameters");
         if (paramsEl != null) {
@@ -325,23 +329,40 @@ public class PatternDomParser {
       Element aEl = (Element) n;
       PatternModel.Action a = new PatternModel.Action();
 
-      String lhs = attr(aEl, "var");
-      String rhsAttr = attr(aEl, "value");
-      String rhs = (rhsAttr != null) ? rhsAttr : textOr(aEl, "");
+      String singleVar = attr(aEl, "var");
+      String singleValueAttr = attr(aEl, "value");
+      String multiVars = attr(aEl, "vars");
+      String multiValues = attr(aEl, "values");
+      String text = textOr(aEl, "");
 
-      String assignment;
-      if (lhs != null && !lhs.isBlank() && !"skip".equalsIgnoreCase(lhs)) {
-        String right = (rhs == null || rhs.isBlank()) ? "skip" : rhs;
-        assignment = lhs + " ≔ " + right;
-      } else if (lhs != null && "skip".equalsIgnoreCase(lhs)) {
-        assignment = "skip";
-      } else if (rhs != null && !rhs.isBlank()) {
-        assignment = rhs;
+      String assignment = null;
+
+      if (multiVars != null && !multiVars.isBlank()) {
+        String lhs = multiVars.trim();
+        String rhs = (multiValues != null && !multiValues.isBlank()) ? multiValues : (text.isBlank() ? null : text);
+        if (!lhs.isEmpty() && rhs != null && !rhs.isBlank()) {
+          assignment = lhs + " ≔ " + rhs;
+        }
+      } else if (singleVar != null && !singleVar.isBlank()) {
+        String varName = singleVar.trim();
+        if (!varName.isEmpty() && !"skip".equalsIgnoreCase(varName)) {
+          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+          if (rhs == null || rhs.isBlank()) rhs = "skip";
+          assignment = varName + " ≔ " + rhs;
+        } else {
+          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+          if (rhs != null && !rhs.isBlank() && !rhs.trim().equalsIgnoreCase("skip")) {
+            assignment = rhs;
+          }
+        }
       } else {
-        assignment = "skip";
+        String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+        if (rhs != null && !rhs.isBlank()) {
+          assignment = rhs;
+        }
       }
 
-      if (assignment.trim().equalsIgnoreCase("skip")) continue;
+      if (assignment == null || assignment.trim().equalsIgnoreCase("skip")) continue;
 
       a.assignment = assignment;
       target.add(a);

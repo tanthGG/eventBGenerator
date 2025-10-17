@@ -1,0 +1,107 @@
+/* =========================================
+   Pattern-Bundle XML Grammar (EBNF)
+   Start: <PatternBundleDoc>
+   ========================================= */
+
+<PatternBundleDoc> ::= <XMLDecl>? <PatternBundleElem>
+
+<XMLDecl>          ::= "<?xml" S "version" Eq <Quoted> ( S "encoding" Eq <Quoted> )? "?>"
+
+/* ---------- Root ---------- */
+<PatternBundleElem> ::= "<PatternBundle" S "name" Eq <QuotedName> ">"
+                          S? <ContextElem>
+                          S? <PatternElem>
+                        "</PatternBundle>"
+
+/* ---------- Context (static) ---------- */
+<ContextElem> ::= "<Context" S "name" Eq <QuotedName> ">"
+                    S? <SetsElem>?
+                    S? <ConstantsElem>?
+                    S? <AxiomsElem>?
+                  "</Context>"
+
+<SetsElem>     ::= "<Sets>"      ( S? <SetElem> )*      S? "</Sets>"
+<SetElem>      ::= "<Set" S "name" Eq <QuotedName> "/>"
+
+<ConstantsElem>::= "<Constants>" ( S? <ConstantElem> )* S? "</Constants>"
+<ConstantElem> ::= "<Constant" S "name" Eq <QuotedName> ( S "value" Eq <QuotedText> )? "/>"
+
+<AxiomsElem>   ::= "<Axioms>"    ( S? <AxiomElem> )*    S? "</Axioms>"
+<AxiomElem>    ::= "<Axiom" S "expression" Eq <QuotedExpr> "/>"
+
+/* ---------- Pattern (dynamic) ---------- */
+<PatternElem> ::= "<Pattern" S "name" Eq <QuotedName> S "type" Eq <QuotedName>
+                   ( S "description" Eq <QuotedText> )? ">"
+                    S? <ContextRefElem>
+                    S? <VariablesElem>?
+                    S? <InvariantsElem>?
+                    S? <InitialisationElem>?
+                    S? <EventsElem>?
+                  "</Pattern>"
+
+<ContextRefElem> ::= "<ContextRef" S "name" Eq <QuotedName> "/>"
+
+/* Variables & Invariants */
+<VariablesElem>  ::= "<Variables>"  ( S? <VariableElem> )*   S? "</Variables>"
+<VariableElem>   ::= "<Variable" S "name" Eq <QuotedName> S "type" Eq <QuotedType>
+                      ( S "init" Eq <QuotedExpr> )? "/>"
+
+<InvariantsElem> ::= "<Invariants>" ( S? <InvariantElem> )*  S? "</Invariants>"
+<InvariantElem>  ::= "<Invariant" ( S "name" Eq <QuotedName> )?
+                      S "expression" Eq <QuotedExpr> "/>"
+
+/* Initialisation actions (parallel assignment semantics in mapper) */
+<InitialisationElem> ::= "<Initialisation>" ( S? <ActionElem> )+ S? "</Initialisation>"
+
+/* Events */
+<EventsElem> ::= "<Events>" ( S? <EventElem> )+ S? "</Events>"
+
+<EventElem>  ::= "<Event" S "name" Eq <QuotedName> ">"
+                   S? <ParametersElem>?
+                   S? <GuardsElem>?
+                   S? <ActionsElem>?
+                 "</Event>"
+
+<ParametersElem> ::= "<Parameters>" ( S? <ParamElem> )+ S? "</Parameters>"
+<ParamElem>      ::= "<Param" S "name" Eq <QuotedName> S "type" Eq <QuotedType> "/>"
+
+<GuardsElem> ::= "<Guards>" ( S? <GuardElem> )+ S? "</Guards>"
+<GuardElem>  ::= "<Guard" ( S "name" Eq <QuotedName> )?
+                  S "expression" Eq <QuotedExpr> "/>"
+
+<ActionsElem> ::= "<Actions>" ( S? <ActionElem> )+ S? "</Actions>"
+/* Either single assignment (var/value) OR aligned multi-assign (vars/values) */
+<ActionElem>  ::= "<Action"
+                    (  S "var"  Eq <QuotedName>  S "value"  Eq <QuotedExpr>
+                     | S "vars" Eq <QuotedNameList> S "values" Eq <QuotedExprList> )
+                  "/>"
+
+/* ---------- Lexical helpers ---------- */
+S                 ::= ( " " | "\t" | "\r" | "\n" )+
+Eq                ::= S? "=" S?
+
+<Quoted>          ::= "\"" <CharData> "\""
+<QuotedName>      ::= "\"" <Name> "\""
+<QuotedText>      ::= "\"" <Text> "\""
+<QuotedType>      ::= "\"" <TypeExpr> "\""
+<QuotedExpr>      ::= "\"" <Expr> "\""
+<QuotedNameList>  ::= "\"" <Name> ( "," <Name> )* "\""
+<QuotedExprList>  ::= "\"" <Expr> ( "," <Expr> )* "\""
+
+<Name>            ::= <NameStart> <NameChar>*
+<NameStart>       ::= "_" | ":" | [A-Z] | [a-z]
+<NameChar>        ::= <NameStart> | [0-9] | "-" | "."
+
+<Text>            ::= (<NoQuote>)               
+<CharData>        ::= (#x09 | #x0A | #x0D | #x20-#x7E | #x80-#x10FFFF)*
+<NoQuote>         ::= (#x20-#x21 | #x23-#x7E | #x80-#x10FFFF)
+
+/* Types allow Event-B-like constructs: ℙ(Z), BOOL, ND↔PKT, ND \ Dests, etc. */
+<TypeExpr>        ::= (<TypeChar>)+
+<TypeChar>        ::= <NameChar> | " " | "\\" | "→" | "↔" | "∈" | "⊆" | "ℙ"
+                    | "(" | ")" | "{" | "}" | "[" | "]" | "," | ":" | "|" | "/"
+                    | "<" | ">" | "=" | "-" | "+" | "*" | "≤" | "≥"
+
+/* Expressions allow guards/actions/invariants: set ops, maps, tuples, etc. */
+<Expr>            ::= (<ExprChar>)+
+<ExprChar>        ::= <TypeChar> | "'" | "≔" | "∪" | "∩" | "∖" | "∅" | "¬" | "∧" | "∨" | "↦"

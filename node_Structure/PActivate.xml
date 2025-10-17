@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<Pattern name="PActivate" type="EventComponent" description="Activation mechanism for emergency alert when sensed data exceeds safety threshold">
+  <Context name="Context_PActivate"/>
+
+  <Variables>
+    <Variable name="recvedData" type="Actuators → ℙ(Z)"/>
+    <Variable name="emergencyAlert" type="Actuators → BOOL"/>
+    <Variable name="safetyThreshold" type="Z"/>
+  </Variables>
+
+  <Invariants>
+    <Invariant expression="recvedData ∈ Actuators → ℙ(Z)"/>
+    <Invariant expression="emergencyAlert ∈ Actuators → BOOL"/>
+    <Invariant expression="safetyThreshold ∈ Z"/>
+  </Invariants>
+
+  <Events>
+
+    <Event name="Initialisation">
+      <Actions>
+        <Action var="recvedData" value="∅"/>
+        <Action var="emergencyAlert" value="Actuators × {FALSE}"/>
+      </Actions>
+    </Event>
+
+    <Event name="actuating">
+      <Parameters>
+        <Param name="act" type="Actuators"/>
+        <Param name="data" type="Z"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="act ∈ dom(recvedData)"/>
+        <Guard expression="data ∈ recvedData(act)"/>
+        <Guard expression="data ≥ safetyThreshold"/>
+        <Guard expression="emergencyAlert(act) = FALSE"/>
+      </Guards>
+      <Actions>
+        <Action var="recvedData(act)" value="recvedData(act) \ {data}"/>
+        <Action var="emergencyAlert(act)" value="TRUE"/>
+      </Actions>
+    </Event>
+
+    <Event name="no_actuating">
+      <Parameters>
+        <Param name="act" type="Actuators"/>
+        <Param name="data" type="Z"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="act ∈ dom(recvedData)"/>
+        <Guard expression="data ∈ recvedData(act)"/>
+        <Guard expression="data &lt; safetyThreshold"/>
+      </Guards>
+      <Actions>
+        <Action var="recvedData(act)" value="recvedData(act) \ {data}"/>
+      </Actions>
+    </Event>
+
+    <Event name="reset_actuatingStatus">
+      <Parameters>
+        <Param name="act" type="Actuators"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="act ∈ dom(emergencyAlert)"/>
+        <Guard expression="emergencyAlert(act) = TRUE"/>
+      </Guards>
+      <Actions>
+        <Action var="emergencyAlert(act)" value="FALSE"/>
+      </Actions>
+    </Event>
+
+  </Events>
+</Pattern>
