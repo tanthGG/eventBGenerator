@@ -1,0 +1,19 @@
+context Composite_C0
+sets
+  PKT
+
+constants
+  ND
+  Dests
+  initialSrcAddr
+  finalDestAddr
+
+axioms
+  @ax01 ND ⊆ ℕ
+  @ax02 finite(ND)
+  @ax03 Dests ⊆ ND
+  @ax04 finite(PKT)
+  @ax05 initialSrcAddr ∈ PKT → ND
+  @ax06 finalDestAddr ∈ ℙ(PKT × ℤ)
+
+end

@@ -1,0 +1,205 @@
+machine Composite_M0
+sees Composite_C0
+
+variables
+  destBuff
+  ndBuff
+  pktFwdr
+  pktData
+  createdPkts
+  recvBuff
+  clrRecvBuffFlg
+  sentDown
+  sentUp
+  ctlNeighbours
+
+invariants
+  @inv01 destBuff ∈ Dests ↔ PKT
+  @inv02 ndBuff ∈ ND ↔ PKT
+  @inv03 pktFwdr ∈ PKT ⇸ ND
+  @inv04 pktData ∈ PKT ⇸ ℤ
+  @inv05 createdPkts ⊆ PKT
+  @inv06 recvBuff ∈ ND ↔ PKT
+  @inv07 clrRecvBuffFlg ∈ ND ↔ PKT
+  @inv08 sentUp ∈ ND ↔ PKT
+  @inv09 sentDown ∈ ND ↔ PKT
+  @inv10 ctlNeighbours ∈ PKT ↔ ND
+
+events
+  event INITIALISATION
+    then
+      @int01 destBuff ≔ ∅
+      @int02 ndBuff ≔ ∅
+      @int03 pktFwdr ≔ ∅
+      @int04 pktData ≔ ∅
+      @int05 createdPkts ≔ ∅
+      @int06 recvBuff ≔ ∅
+      @int07 clrRecvBuffFlg ≔ ∅
+      @int08 sentUp ≔ ∅
+      @int09 sentDown ≔ ∅
+      @int10 ctlNeighbours ≔ ∅
+  end
+
+  event creating_Pkt
+    any x des pkt data
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 pkt ∈ PKT
+      @g03 data ∈ ℤ
+      @g04 x = initialSrcAddr(pkt)
+      @g05 des = ran({pkt} ◁ finalDestAddr)
+      @g06 pkt ∉ dom(pktFwdr)
+      @g07 pkt ∉ dom(pktData)
+      @g08 x ↦ pkt ∉ ndBuff
+    then
+      @a01 createdPkts ≔ createdPkts ∪ {pkt}
+      @a02 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}
+      @a03 pktData ≔ pktData ∪ {pkt ↦ data}
+      @a04 ndBuff ≔ ndBuff ∪ {x ↦ pkt}
+  end
+
+  event start_tx
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ sentDown
+      @g04 x ↦ pkt ∈ ndBuff
+      @g05 pkt ∈ dom(pktFwdr)
+    then
+      @a01 sentDown ≔ sentDown ∪ {x ↦ pkt}
+      @a02 ndBuff ≔ ndBuff \ {x ↦ pkt}
+      @a03 pktFwdr ≔ pktFwdr <+ {pkt ↦ x}
+  end
+
+  event receive
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ recvBuff
+      @g04 x ↦ pkt ∉ sentUp
+      @g05 x ↦ pkt ∈ sentDown
+      @g06 pkt ↦ x ∈ ctlNeighbours
+    then
+      @a01 recvBuff ≔ recvBuff ∪ {x ↦ pkt}
+      @a02 ctlNeighbours ≔ ctlNeighbours \ {pkt ↦ x}
+  end
+
+  event fwdr_receive_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∉ clrRecvBuffFlg
+      @g05 x ∉ Dests
+      @g06 x ∈ ND \ Dests
+      @g07 x ↦ pkt ∉ ndBuff
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+      @a02 ndBuff ≔ ndBuff ∪ {x ↦ pkt}
+  end
+
+  event dest_recv_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ∈ Dests
+      @g05 x ↦ pkt ∉ clrRecvBuffFlg
+      @g06 x ↦ pkt ∉ destBuff
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+      @a02 destBuff ≔ destBuff ∪ {x ↦ pkt}
+  end
+
+  event finish_tx_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 {pkt} ◁ ctlNeighbours = ∅
+      @g04 pkt ∈ ran(sentUp)
+      @g05 pkt ∉ ran(sentDown)
+      @g06 x ∈ dom(sentUp)
+      @g07 x ↦ pkt ∈ sentUp
+      @g08 pkt ∈ ran(ndBuff)
+    then
+      @a01 sentUp ≔ sentUp \ {x ↦ pkt}
+  end
+
+  event final_tx_pkts
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 {pkt} ◁ ctlNeighbours = ∅
+      @g03 pkt ∈ ran(sentUp)
+      @g04 pkt ∉ ran(sentDown)
+      @g05 pkt ∉ ran(ndBuff)
+    then
+      @a01 sentUp ≔ sentUp ⩥ {pkt}
+  end
+
+  event remove_destBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ∈ Dests
+      @g04 x ↦ pkt ∈ destBuff
+    then
+      @a01 destBuff ≔ destBuff \ {x ↦ pkt}
+  end
+
+  event is_In_Range_destBuff
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 pkt ∈ ran(destBuff)
+  end
+
+  event isNot_In_Range_destBuff
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 pkt ∉ ran(destBuff)
+  end
+
+  event clear_recvdBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @a01 recvBuff ≔ recvBuff \ {x ↦ pkt}
+  end
+
+  event send_down
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ sentDown
+  end
+
+  event send_up
+    any x pkt nbrs
+    where
+      @g01 nbrs ∈ ℙ(ND)
+      @g02 x ∈ ND
+      @g03 pkt ∈ PKT
+      @g04 nbrs ∈ ℙ(ND) ∧ nbrs ≠ ∅
+      @g05 pkt ∉ dom(ctlNeighbours)
+      @g06 x ↦ pkt ∉ sentUp
+      @g07 x ↦ pkt ∈ sentDown
+    then
+      @a01 ctlNeighbours ≔ ctlNeighbours ∪ ({pkt} × nbrs)
+      @a02 sentDown ≔ sentDown \ {x ↦ pkt}
+      @a03 sentUp ≔ sentUp ∪ {x ↦ pkt}
+  end
+
+end
