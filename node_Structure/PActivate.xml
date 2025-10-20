@@ -4,15 +4,15 @@
   <Context name="Context_PActivate"/>
 
   <Variables>
-    <Variable name="recvedData" type="Actuators → ℙ(Z)"/>
+    <Variable name="recvedData" type="Actuators → ℙ(ℤ)"/>
     <Variable name="emergencyAlert" type="Actuators → BOOL"/>
-    <Variable name="safetyThreshold" type="Z"/>
+    <Variable name="safetyThreshold" type="ℤ"/>
   </Variables>
 
   <Invariants>
-    <Invariant expression="recvedData ∈ Actuators → ℙ(Z)"/>
+    <Invariant expression="recvedData ∈ Actuators → ℙ(ℤ)"/>
     <Invariant expression="emergencyAlert ∈ Actuators → BOOL"/>
-    <Invariant expression="safetyThreshold ∈ Z"/>
+    <Invariant expression="safetyThreshold ∈ ℤ"/>
   </Invariants>
 
   <Events>
@@ -27,7 +27,7 @@
     <Event name="actuating">
       <Parameters>
         <Param name="act" type="Actuators"/>
-        <Param name="data" type="Z"/>
+        <Param name="data" type="ℤ"/>
       </Parameters>
       <Guards>
         <Guard expression="act ∈ dom(recvedData)"/>
@@ -44,7 +44,7 @@
     <Event name="no_actuating">
       <Parameters>
         <Param name="act" type="Actuators"/>
-        <Param name="data" type="Z"/>
+        <Param name="data" type="ℤ"/>
       </Parameters>
       <Guards>
         <Guard expression="act ∈ dom(recvedData)"/>

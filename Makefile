@@ -3,8 +3,10 @@ PATTERN_DIR := node_Structure
 OUT_DIR := generated
 PATTERN_FILES := $(wildcard $(PATTERN_DIR)/*.xml)
 PROJECTS := $(patsubst $(PATTERN_DIR)/%.xml,%Proj,$(PATTERN_FILES))
+PORT ?= 8080
+WORKSPACE ?= $(OUT_DIR)
 
-.PHONY: generate regen clean-generated clean
+.PHONY: generate regen clean-generated clean serve
 
 build: $(JAR)
 
@@ -25,3 +27,7 @@ clean-generated:
 
 clean: clean-generated
 	rm -rf target
+
+serve: build
+	@mkdir -p $(WORKSPACE)
+	java -jar $(JAR) --server --port $(PORT) -o $(WORKSPACE)

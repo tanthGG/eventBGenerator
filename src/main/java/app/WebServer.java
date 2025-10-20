@@ -114,10 +114,10 @@ public class WebServer {
     byte[] machineBytes = ir.machineText().getBytes(StandardCharsets.UTF_8);
     try (var baos = new java.io.ByteArrayOutputStream();
          var zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
-      zip.putNextEntry(new ZipEntry("Generated_C0.ctx"));
+      zip.putNextEntry(new ZipEntry("Generated_Composite_C0.ctx"));
       zip.write(ctxBytes);
       zip.closeEntry();
-      zip.putNextEntry(new ZipEntry("Generated_M0.bcm"));
+      zip.putNextEntry(new ZipEntry("Generated_Composite_M0.bcm"));
       zip.write(machineBytes);
       zip.closeEntry();
       zip.finish();

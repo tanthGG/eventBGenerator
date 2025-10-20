@@ -1,6 +1,7 @@
 package app;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -159,6 +160,8 @@ public final class PatternCombinationEngine {
       }
     }
 
+    pruneUnusedParameters(merged);
+
     return merged;
   }
 
@@ -213,6 +216,45 @@ public final class PatternCombinationEngine {
 
     // Prefer the more descriptive type (heuristic: longer textual representation).
     return candidate.length() >= existing.length() ? candidate : existing;
+  }
+
+  private void pruneUnusedParameters(PatternModel.Event event) {
+    if (event.params.isEmpty()) return;
+    Iterator<PatternModel.Param> it = event.params.iterator();
+    while (it.hasNext()) {
+      PatternModel.Param param = it.next();
+      if (param.type != null && !param.type.isBlank()) {
+        continue;
+      }
+      if (isReferenced(param.name, event.guards, event.actions)) {
+        continue;
+      }
+      it.remove();
+    }
+  }
+
+  private boolean isReferenced(String name, List<PatternModel.Guard> guards, List<PatternModel.Action> actions) {
+    if (name == null || name.isBlank()) return false;
+    for (PatternModel.Guard guard : guards) {
+      if (guard != null && guard.expr != null && containsToken(guard.expr, name)) {
+        return true;
+      }
+    }
+    for (PatternModel.Action action : actions) {
+      if (action != null && action.assignment != null && containsToken(action.assignment, name)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean containsToken(String text, String token) {
+    if (text == null) return false;
+    String cleaned = text.replaceAll("[^A-Za-z0-9_]", " ");
+    for (String part : cleaned.split("\\s+")) {
+      if (part.equals(token)) return true;
+    }
+    return false;
   }
 
   private record EventKey(String pattern, String event) {}

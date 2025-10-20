@@ -2,8 +2,8 @@ package app;
 
 public class EventBMapper {
   public EventBIR toEventB(PatternModel m) {
-    String ctxName = m.name + "_C0";
-    String machName = m.name + "_M0";
+    String machName = "Composite_M0";
+    String ctxName = "Composite_C0";
 
     StringBuilder ctxSb = new StringBuilder();
     ctxSb.append("context ").append(ctxName).append("\n");
