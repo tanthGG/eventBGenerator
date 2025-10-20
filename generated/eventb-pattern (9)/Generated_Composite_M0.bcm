@@ -1,0 +1,43 @@
+machine Composite_M0
+sees Composite_C0
+
+variables
+  emergencyAlert
+
+invariants
+  @inv01 emergencyAlert ∈ BOOL
+
+events
+  event INITIALISATION
+    then
+      @int01 emergencyAlert ≔ FALSE
+  end
+
+  event actuating
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data ≥ safetyThreshold
+      @g03 emergencyAlert = FALSE
+    then
+      @a01 emergencyAlert ≔ TRUE
+  end
+
+  event no_actuating
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data < safetyThreshold
+  end
+
+  event reset_actuatingStatus
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data ≥ safetyThreshold
+      @g03 emergencyAlert = TRUE
+    then
+      @a01 emergencyAlert ≔ FALSE
+  end
+
+end

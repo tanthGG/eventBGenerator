@@ -1,0 +1,8 @@
+context Composite_C0
+constants
+  safetyThreshold
+
+axioms
+  @ax01 safetyThreshold ∈ ℤ
+
+end

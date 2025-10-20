@@ -1,71 +1,65 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 
 <Pattern name="PActivate" type="EventComponent" description="Activation mechanism for emergency alert when sensed data exceeds safety threshold">
-  <Context name="Context_PActivate"/>
+  <Context name="Context_PActivate">
+    <Constants>
+      <Constant name="safetyThreshold"/>
+    </Constants>
+    <Axioms>
+      <Axiom expression="safetyThreshold ∈ ℤ"/>
+    </Axioms>
+  </Context>
 
   <Variables>
-    <Variable name="recvedData" type="Actuators → ℙ(ℤ)"/>
-    <Variable name="emergencyAlert" type="Actuators → BOOL"/>
-    <Variable name="safetyThreshold" type="ℤ"/>
+    <Variable name="emergencyAlert" type="BOOL"/>
   </Variables>
 
   <Invariants>
-    <Invariant expression="recvedData ∈ Actuators → ℙ(ℤ)"/>
-    <Invariant expression="emergencyAlert ∈ Actuators → BOOL"/>
-    <Invariant expression="safetyThreshold ∈ ℤ"/>
+    <Invariant expression="emergencyAlert ∈ BOOL"/>
   </Invariants>
 
   <Events>
 
     <Event name="Initialisation">
       <Actions>
-        <Action var="recvedData" value="∅"/>
-        <Action var="emergencyAlert" value="Actuators × {FALSE}"/>
+        <Action var="emergencyAlert" value="FALSE"/>
       </Actions>
     </Event>
 
     <Event name="actuating">
       <Parameters>
-        <Param name="act" type="Actuators"/>
         <Param name="data" type="ℤ"/>
       </Parameters>
       <Guards>
-        <Guard expression="act ∈ dom(recvedData)"/>
-        <Guard expression="data ∈ recvedData(act)"/>
+        <Guard expression="data ∈ ℤ"/>
         <Guard expression="data ≥ safetyThreshold"/>
-        <Guard expression="emergencyAlert(act) = FALSE"/>
+        <Guard expression="emergencyAlert = FALSE"/>
       </Guards>
       <Actions>
-        <Action var="recvedData(act)" value="recvedData(act) \ {data}"/>
-        <Action var="emergencyAlert(act)" value="TRUE"/>
+        <Action var="emergencyAlert" value="TRUE"/>
       </Actions>
     </Event>
 
     <Event name="no_actuating">
       <Parameters>
-        <Param name="act" type="Actuators"/>
         <Param name="data" type="ℤ"/>
       </Parameters>
       <Guards>
-        <Guard expression="act ∈ dom(recvedData)"/>
-        <Guard expression="data ∈ recvedData(act)"/>
+        <Guard expression="data ∈ ℤ"/>
         <Guard expression="data &lt; safetyThreshold"/>
       </Guards>
-      <Actions>
-        <Action var="recvedData(act)" value="recvedData(act) \ {data}"/>
-      </Actions>
     </Event>
 
     <Event name="reset_actuatingStatus">
       <Parameters>
-        <Param name="act" type="Actuators"/>
+        <Param name="data" type="ℤ"/>
       </Parameters>
       <Guards>
-        <Guard expression="act ∈ dom(emergencyAlert)"/>
-        <Guard expression="emergencyAlert(act) = TRUE"/>
+        <Guard expression="data ≥ safetyThreshold"/>
+        <Guard expression="emergencyAlert = TRUE"/>
       </Guards>
       <Actions>
-        <Action var="emergencyAlert(act)" value="FALSE"/>
+        <Action var="emergencyAlert" value="FALSE"/>
       </Actions>
     </Event>
 
