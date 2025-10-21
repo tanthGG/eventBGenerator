@@ -93,6 +93,24 @@ h2 {
   box-shadow: none;
 }
 
+#reset-refinement-btn {
+  background: #fff;
+  color: #2f5ed7;
+  border: 1px solid #2f5ed7;
+  border-radius: 8px;
+  padding: 0.7rem 1.2rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s, color 0.15s;
+}
+
+#reset-refinement-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(47, 94, 215, 0.15);
+  background: #2f5ed7;
+  color: #fff;
+}
+
 .status {
   min-height: 1.5rem;
   font-size: 0.95rem;

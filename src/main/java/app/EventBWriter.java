@@ -5,9 +5,11 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 
 public class EventBWriter {
-  public void write(Path project, String ctxText, String machineText) throws IOException {
+  public void write(Path project, EventBIR ir) throws IOException {
     Files.createDirectories(project);
-    Files.writeString(project.resolve("Generated_Composite_C0.ctx"), ctxText, StandardCharsets.UTF_8);
-    Files.writeString(project.resolve("Generated_Composite_M0.bcm"), machineText, StandardCharsets.UTF_8);
+    Path refinementDir = project.resolve("machine" + ir.refinement());
+    Files.createDirectories(refinementDir);
+    Files.writeString(refinementDir.resolve(ir.ctxName() + ".ctx"), ir.ctxText(), StandardCharsets.UTF_8);
+    Files.writeString(refinementDir.resolve(ir.machName() + ".bcm"), ir.machineText(), StandardCharsets.UTF_8);
   }
 }

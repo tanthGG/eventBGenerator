@@ -22,7 +22,7 @@ public class GenerationService {
     generate(List.of(patternXml), projectName, requirements);
   }
 
-  public EventBIR compose(List<Path> patternXmls) throws Exception {
+  public EventBIR compose(List<Path> patternXmls, int refinement) throws Exception {
     if (patternXmls == null || patternXmls.isEmpty()) {
       throw new IllegalArgumentException("No pattern XML paths provided");
     }
@@ -31,13 +31,17 @@ public class GenerationService {
       models.add(parser.parse(path));
     }
     PatternModel model = models.size() == 1 ? models.get(0) : composer.compose(models);
-    return mapper.toEventB(model);
+    return mapper.toEventB(model, refinement);
+  }
+
+  public EventBIR compose(List<Path> patternXmls) throws Exception {
+    return compose(patternXmls, 0);
   }
 
   public void generate(List<Path> patternXmls, String projectName, ReqSpec requirements) throws Exception {
     Path projectDir = rodinService.ensureProject(projectName);
     EventBIR ir = compose(patternXmls);
-    writer.write(projectDir, ir.ctxText(), ir.machineText());
+    writer.write(projectDir, ir);
     rodinService.refresh(projectDir);
   }
 }

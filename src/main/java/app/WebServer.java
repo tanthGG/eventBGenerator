@@ -24,6 +24,10 @@ import java.util.zip.ZipOutputStream;
 public class WebServer {
 
   private static final Pattern QUOTED_VALUE = Pattern.compile("\"([^\"]+)\"");
+  private static final Pattern PATTERNS_ARRAY =
+      Pattern.compile("\"patterns\"\\s*:\\s*\\[(.*?)]", Pattern.DOTALL);
+  private static final Pattern REFINEMENT_VALUE =
+      Pattern.compile("\"refinement\"\\s*:\\s*(\\d+)");
 
   private final GenerationService generationService;
   private final Path projectRoot;
@@ -75,11 +79,13 @@ public class WebServer {
       return;
     }
     String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-    List<String> fileNames = extractQuotedValues(body);
+    GenerateRequest request = parseGenerateRequest(body);
+    List<String> fileNames = request.patterns();
     if (fileNames.isEmpty()) {
       send(exchange, 400, "No patterns selected", "text/plain");
       return;
     }
+    int refinement = Math.max(request.refinement(), 1);
 
     List<Path> patternPaths = new ArrayList<>();
     for (String fileName : fileNames) {
@@ -93,7 +99,7 @@ public class WebServer {
 
     EventBIR ir;
     try {
-      ir = generationService.compose(patternPaths);
+      ir = generationService.compose(patternPaths, refinement);
     } catch (Exception e) {
       send(exchange, 500, "Failed to generate: " + e.getMessage(), "text/plain");
       return;
@@ -112,12 +118,15 @@ public class WebServer {
   private byte[] toZip(EventBIR ir) throws IOException {
     byte[] ctxBytes = ir.ctxText().getBytes(StandardCharsets.UTF_8);
     byte[] machineBytes = ir.machineText().getBytes(StandardCharsets.UTF_8);
+    String folderName = "machine" + ir.refinement();
     try (var baos = new java.io.ByteArrayOutputStream();
          var zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
-      zip.putNextEntry(new ZipEntry("Generated_Composite_C0.ctx"));
+      zip.putNextEntry(new ZipEntry(folderName + "/"));
+      zip.closeEntry();
+      zip.putNextEntry(new ZipEntry(folderName + "/" + ir.ctxName() + ".ctx"));
       zip.write(ctxBytes);
       zip.closeEntry();
-      zip.putNextEntry(new ZipEntry("Generated_Composite_M0.bcm"));
+      zip.putNextEntry(new ZipEntry(folderName + "/" + ir.machName() + ".bcm"));
       zip.write(machineBytes);
       zip.closeEntry();
       zip.finish();
@@ -125,20 +134,29 @@ public class WebServer {
     }
   }
 
-  private List<String> extractQuotedValues(String body) {
-    List<String> values = new ArrayList<>();
-    int start = body.indexOf('[');
-    int end = body.indexOf(']', start >= 0 ? start : 0);
-    if (start < 0 || end < 0 || end <= start) {
-      return values;
+  private GenerateRequest parseGenerateRequest(String body) {
+    int refinement = 1;
+    Matcher refMatcher = REFINEMENT_VALUE.matcher(body);
+    if (refMatcher.find()) {
+      try {
+        refinement = Math.max(Integer.parseInt(refMatcher.group(1)), 1);
+      } catch (NumberFormatException ignored) {
+        refinement = 1;
+      }
     }
-    String inside = body.substring(start + 1, end);
-    Matcher matcher = QUOTED_VALUE.matcher(inside);
-    while (matcher.find()) {
-      String value = matcher.group(1).trim();
-      if (!value.isEmpty()) values.add(value);
+
+    List<String> patterns = new ArrayList<>();
+    Matcher arrayMatcher = PATTERNS_ARRAY.matcher(body);
+    if (arrayMatcher.find()) {
+      String inside = arrayMatcher.group(1);
+      Matcher matcher = QUOTED_VALUE.matcher(inside);
+      while (matcher.find()) {
+        String value = matcher.group(1).trim();
+        if (!value.isEmpty()) patterns.add(value);
+      }
     }
-    return values;
+
+    return new GenerateRequest(refinement, patterns);
   }
 
   private void send(HttpExchange exchange, int status, String body, String contentType) throws IOException {
@@ -179,4 +197,6 @@ public class WebServer {
       }
     }
   }
+
+  private record GenerateRequest(int refinement, List<String> patterns) {}
 }

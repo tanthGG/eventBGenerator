@@ -1,9 +1,11 @@
 package app;
 
 public class EventBMapper {
-  public EventBIR toEventB(PatternModel m) {
-    String machName = "Composite_M0";
-    String ctxName = "Composite_C0";
+  public EventBIR toEventB(PatternModel m, int refinement) {
+    String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
+    int refIndex = Math.max(refinement, 0);
+    String ctxName = baseName + "_C" + refIndex;
+    String machName = baseName + "_M" + refIndex;
 
     StringBuilder ctxSb = new StringBuilder();
     ctxSb.append("context ").append(ctxName).append("\n");
@@ -122,7 +124,7 @@ public class EventBMapper {
     }
 
     sb.append("end\n");
-    return new EventBIR(ctxSb.toString(), sb.toString());
+    return new EventBIR(baseName, refIndex, ctxName, machName, ctxSb.toString(), sb.toString());
   }
 
   private static boolean hasExplicitTypeGuard(java.util.List<PatternModel.Guard> guards, String param, String type) {
