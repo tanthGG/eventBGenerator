@@ -1,0 +1,19 @@
+context PSend_Composite_C1
+sets
+  PKT
+
+constants
+  ND
+  Dests
+  initialSrcAddr
+  finalDestAddr
+
+axioms
+  @ax01 ND ⊆ ℕ
+  @ax02 finite(ND)
+  @ax03 finite(PKT)
+  @ax04 finalDestAddr ∈ ℙ(PKT × ℤ)
+  @ax05 Dests ⊆ ND
+  @ax06 initialSrcAddr ∈ PKT → ND
+
+end

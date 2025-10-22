@@ -18,6 +18,7 @@ app/PatternModel$Context.class
 app/EventBMapper.class
 app/PatternModel$Guard.class
 app/WebServer.class
+app/WebServer$GenerateRequest.class
 app/WebServer$StaticHandler.class
 app/PatternCombinationEngine.class
 app/PatternModel$Action.class

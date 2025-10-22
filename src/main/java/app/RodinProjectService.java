@@ -12,5 +12,8 @@ public class RodinProjectService {
     Files.createDirectories(project);
     return project;
   }
+  public Path workspace() {
+    return workspace;
+  }
   public void refresh(Path project) { /* No-op for CLI */ }
 }

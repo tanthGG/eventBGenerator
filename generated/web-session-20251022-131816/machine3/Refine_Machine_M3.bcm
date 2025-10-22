@@ -1,7 +1,8 @@
-machine Composite_M0
-sees Composite_C0
+machine Refine_Machine_M3
+sees Refine_Machine_C3
 
 variables
+  emergencyAlert
   destBuff
   ndBuff
   pktFwdr
@@ -12,32 +13,40 @@ variables
   sentDown
   sentUp
   ctlNeighbours
+  ctlSensedFlg
+  senseBuff
 
 invariants
-  @inv01 destBuff ∈ Dests ↔ PKT
-  @inv02 ndBuff ∈ ND ↔ PKT
-  @inv03 pktFwdr ∈ PKT ⇸ ND
-  @inv04 pktData ∈ PKT ⇸ ℤ
-  @inv05 createdPkts ⊆ PKT
-  @inv06 recvBuff ∈ ND ↔ PKT
-  @inv07 clrRecvBuffFlg ∈ ND ↔ PKT
-  @inv08 sentUp ∈ ND ↔ PKT
-  @inv09 sentDown ∈ ND ↔ PKT
-  @inv10 ctlNeighbours ∈ PKT ↔ ND
+  @inv01 emergencyAlert ∈ BOOL
+  @inv02 destBuff ∈ Dests ↔ PKT
+  @inv03 ndBuff ∈ ND ↔ PKT
+  @inv04 pktFwdr ∈ PKT ⇸ ND
+  @inv05 pktData ∈ PKT ⇸ ℤ
+  @inv06 createdPkts ⊆ PKT
+  @inv07 recvBuff ∈ ND ↔ PKT
+  @inv08 clrRecvBuffFlg ∈ ND ↔ PKT
+  @inv09 sentUp ∈ ND ↔ PKT
+  @inv10 sentDown ∈ ND ↔ PKT
+  @inv11 ctlNeighbours ∈ PKT ↔ ND
+  @inv12 ctlSensedFlg ∈ ND \ Dests → BOOL
+  @inv13 senseBuff ∈ ND \ Dests → ℙ(ℤ)
 
 events
   event INITIALISATION
     then
-      @int01 destBuff ≔ ∅
-      @int02 ndBuff ≔ ∅
-      @int03 pktFwdr ≔ ∅
-      @int04 pktData ≔ ∅
-      @int05 createdPkts ≔ ∅
-      @int06 recvBuff ≔ ∅
-      @int07 clrRecvBuffFlg ≔ ∅
-      @int08 sentUp ≔ ∅
-      @int09 sentDown ≔ ∅
-      @int10 ctlNeighbours ≔ ∅
+      @int01 emergencyAlert ≔ FALSE
+      @int02 destBuff ≔ ∅
+      @int03 ndBuff ≔ ∅
+      @int04 pktFwdr ≔ ∅
+      @int05 pktData ≔ ∅
+      @int06 createdPkts ≔ ∅
+      @int07 recvBuff ≔ ∅
+      @int08 clrRecvBuffFlg ≔ ∅
+      @int09 sentUp ≔ ∅
+      @int10 sentDown ≔ ∅
+      @int11 ctlNeighbours ≔ ∅
+      @int12 ctlSensedFlg ≔ (ND \ Dests) × {FALSE}
+      @int13 senseBuff ≔ (ND \ Dests) × {∅}
   end
 
   event creating_Pkt
@@ -142,6 +151,33 @@ events
       @a01 sentUp ≔ sentUp ⩥ {pkt}
   end
 
+  event actuating
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data ≥ safetyThreshold
+      @g03 emergencyAlert = FALSE
+    then
+      @a01 emergencyAlert ≔ TRUE
+  end
+
+  event no_actuating
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data < safetyThreshold
+  end
+
+  event reset_actuatingStatus
+    any data
+    where
+      @g01 data ∈ ℤ
+      @g02 data ≥ safetyThreshold
+      @g03 emergencyAlert = TRUE
+    then
+      @a01 emergencyAlert ≔ FALSE
+  end
+
   event remove_destBuff
     any x pkt
     where
@@ -200,6 +236,47 @@ events
       @a01 ctlNeighbours ≔ ctlNeighbours ∪ ({pkt} × nbrs)
       @a02 sentDown ≔ sentDown \ {x ↦ pkt}
       @a03 sentUp ≔ sentUp ∪ {x ↦ pkt}
+  end
+
+  event sensing
+    any x sf data
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 sf ∈ BOOL
+      @g03 data ∈ ℤ
+      @g04 x ∈ dom(ctlSensedFlg)
+      @g05 ctlSensedFlg(x) = FALSE
+    then
+      @a01 ctlSensedFlg(x) ≔ sf
+      @a02 senseBuff(x) ≔ senseBuff(x) ∪ {data}
+  end
+
+  event remove_senseBuff
+    any x pkt
+    where
+      @g01 pkt ∈ ℤ
+      @g02 x ∈ ND \ Dests
+      @g03 pkt ∈ senseBuff(x)
+    then
+      @a01 senseBuff(x) ≔ senseBuff(x) \ {pkt}
+      @a02 ctlSensedFlg(x) ≔ FALSE
+  end
+
+  event reset_sensed_flag
+    any x
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 ctlSensedFlg(x) = TRUE
+    then
+      @a01 ctlSensedFlg(x) ≔ FALSE
+  end
+
+  event check_type
+    any pkt ty
+    where
+      @g01 pkt ∈ PKT
+      @g02 ty ∈ TYPE
+      @g03 type(pkt) = ty
   end
 
 end

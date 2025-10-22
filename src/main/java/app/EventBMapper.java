@@ -1,9 +1,12 @@
 package app;
 
 public class EventBMapper {
-  public EventBIR toEventB(PatternModel m) {
-    String machName = "Composite_M0";
-    String ctxName = "Composite_C0";
+  public EventBIR toEventB(PatternModel m, int refinement) {
+    String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
+    int refIndex = Math.max(refinement, 0);
+    boolean includesPSensing = includesPattern(m, "PSensingUnit");
+    String ctxName = includesPSensing ? "Refine_Machine_C" + refIndex : baseName + "_C" + refIndex;
+    String machName = includesPSensing ? "Refine_Machine_M" + refIndex : baseName + "_M" + refIndex;
 
     StringBuilder ctxSb = new StringBuilder();
     ctxSb.append("context ").append(ctxName).append("\n");
@@ -122,7 +125,7 @@ public class EventBMapper {
     }
 
     sb.append("end\n");
-    return new EventBIR(ctxSb.toString(), sb.toString());
+    return new EventBIR(baseName, refIndex, ctxName, machName, ctxSb.toString(), sb.toString());
   }
 
   private static boolean hasExplicitTypeGuard(java.util.List<PatternModel.Guard> guards, String param, String type) {
@@ -133,6 +136,32 @@ public class EventBMapper {
       String normalized = g.expr.replaceAll("\\s+", "");
       if (normalized.equals(needle)) return true;
     }
+    return false;
+  }
+
+  private static boolean includesPattern(PatternModel model, String targetPatternName) {
+    if (model == null || targetPatternName == null) return false;
+    String target = targetPatternName.replaceAll("\\s+", "");
+    if (target.isEmpty()) return false;
+
+    if (model.name != null) {
+      String normalizedModelName = model.name.replaceAll("\\s+", "");
+      if (normalizedModelName.equalsIgnoreCase(target)) {
+        return true;
+      }
+    }
+
+    for (PatternModel.Event event : model.events) {
+      if (event == null || event.sourcePattern == null) continue;
+      String[] parts = event.sourcePattern.split("\\+");
+      for (String part : parts) {
+        String normalizedPart = part.replaceAll("\\s+", "");
+        if (normalizedPart.equalsIgnoreCase(target)) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 }

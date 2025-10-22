@@ -1,41 +1,41 @@
-machine PSend_Composite_M0
-sees PSend_Composite_C0
+machine PPacket_Composite_M2
+sees PPacket_Composite_C2
 
 variables
-  sentDown
-  sentUp
-  ctlNeighbours
-  recvBuff
-  clrRecvBuffFlg
   pktFwdr
   pktData
   createdPkts
+  recvBuff
+  clrRecvBuffFlg
+  sentDown
+  sentUp
+  ctlNeighbours
   ndBuff
   destBuff
 
 invariants
-  @inv01 sentUp ∈ ND ↔ PKT
-  @inv02 sentDown ∈ ND ↔ PKT
-  @inv03 ctlNeighbours ∈ PKT ↔ ND
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
+  @inv03 createdPkts ⊆ PKT
   @inv04 recvBuff ∈ ND ↔ PKT
   @inv05 clrRecvBuffFlg ∈ ND ↔ PKT
-  @inv06 pktFwdr ∈ PKT ⇸ ND
-  @inv07 pktData ∈ PKT ⇸ ℤ
-  @inv08 createdPkts ⊆ PKT
+  @inv06 sentUp ∈ ND ↔ PKT
+  @inv07 sentDown ∈ ND ↔ PKT
+  @inv08 ctlNeighbours ∈ PKT ↔ ND
   @inv09 ndBuff ∈ ND ↔ PKT
   @inv10 destBuff ∈ Dests ↔ PKT
 
 events
   event INITIALISATION
     then
-      @int01 sentUp ≔ ∅
-      @int02 sentDown ≔ ∅
-      @int03 ctlNeighbours ≔ ∅
+      @int01 pktFwdr ≔ ∅
+      @int02 pktData ≔ ∅
+      @int03 createdPkts ≔ ∅
       @int04 recvBuff ≔ ∅
       @int05 clrRecvBuffFlg ≔ ∅
-      @int06 pktFwdr ≔ ∅
-      @int07 pktData ≔ ∅
-      @int08 createdPkts ≔ ∅
+      @int06 sentUp ≔ ∅
+      @int07 sentDown ≔ ∅
+      @int08 ctlNeighbours ≔ ∅
       @int09 ndBuff ≔ ∅
       @int10 destBuff ≔ ∅
   end
@@ -142,6 +142,17 @@ events
       @a01 sentUp ≔ sentUp ⩥ {pkt}
   end
 
+  event clear_recvdBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @a01 recvBuff ≔ recvBuff \ {x ↦ pkt}
+  end
+
   event send_down
     any x pkt
     where
@@ -164,17 +175,6 @@ events
       @a01 ctlNeighbours ≔ ctlNeighbours ∪ ({pkt} × nbrs)
       @a02 sentDown ≔ sentDown \ {x ↦ pkt}
       @a03 sentUp ≔ sentUp ∪ {x ↦ pkt}
-  end
-
-  event clear_recvdBuff
-    any x pkt
-    where
-      @g01 x ∈ ND
-      @g02 pkt ∈ PKT
-      @g03 x ↦ pkt ∈ recvBuff
-      @g04 x ↦ pkt ∈ clrRecvBuffFlg
-    then
-      @a01 recvBuff ≔ recvBuff \ {x ↦ pkt}
   end
 
   event remove_destBuff
