@@ -1,9 +1,7 @@
-machine Composite_M0
-sees Composite_C0
+machine PPacket_Composite_M2
+sees PPacket_Composite_C2
 
 variables
-  destBuff
-  ndBuff
   pktFwdr
   pktData
   createdPkts
@@ -12,32 +10,34 @@ variables
   sentDown
   sentUp
   ctlNeighbours
+  ndBuff
+  destBuff
 
 invariants
-  @inv01 destBuff ∈ Dests ↔ PKT
-  @inv02 ndBuff ∈ ND ↔ PKT
-  @inv03 pktFwdr ∈ PKT ⇸ ND
-  @inv04 pktData ∈ PKT ⇸ ℤ
-  @inv05 createdPkts ⊆ PKT
-  @inv06 recvBuff ∈ ND ↔ PKT
-  @inv07 clrRecvBuffFlg ∈ ND ↔ PKT
-  @inv08 sentUp ∈ ND ↔ PKT
-  @inv09 sentDown ∈ ND ↔ PKT
-  @inv10 ctlNeighbours ∈ PKT ↔ ND
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
+  @inv03 createdPkts ⊆ PKT
+  @inv04 recvBuff ∈ ND ↔ PKT
+  @inv05 clrRecvBuffFlg ∈ ND ↔ PKT
+  @inv06 sentUp ∈ ND ↔ PKT
+  @inv07 sentDown ∈ ND ↔ PKT
+  @inv08 ctlNeighbours ∈ PKT ↔ ND
+  @inv09 ndBuff ∈ ND ↔ PKT
+  @inv10 destBuff ∈ Dests ↔ PKT
 
 events
   event INITIALISATION
     then
-      @int01 destBuff ≔ ∅
-      @int02 ndBuff ≔ ∅
-      @int03 pktFwdr ≔ ∅
-      @int04 pktData ≔ ∅
-      @int05 createdPkts ≔ ∅
-      @int06 recvBuff ≔ ∅
-      @int07 clrRecvBuffFlg ≔ ∅
-      @int08 sentUp ≔ ∅
-      @int09 sentDown ≔ ∅
-      @int10 ctlNeighbours ≔ ∅
+      @int01 pktFwdr ≔ ∅
+      @int02 pktData ≔ ∅
+      @int03 createdPkts ≔ ∅
+      @int04 recvBuff ≔ ∅
+      @int05 clrRecvBuffFlg ≔ ∅
+      @int06 sentUp ≔ ∅
+      @int07 sentDown ≔ ∅
+      @int08 ctlNeighbours ≔ ∅
+      @int09 ndBuff ≔ ∅
+      @int10 destBuff ≔ ∅
   end
 
   event creating_Pkt
@@ -142,31 +142,6 @@ events
       @a01 sentUp ≔ sentUp ⩥ {pkt}
   end
 
-  event remove_destBuff
-    any x pkt
-    where
-      @g01 x ∈ ND
-      @g02 pkt ∈ PKT
-      @g03 x ∈ Dests
-      @g04 x ↦ pkt ∈ destBuff
-    then
-      @a01 destBuff ≔ destBuff \ {x ↦ pkt}
-  end
-
-  event is_In_Range_destBuff
-    any pkt
-    where
-      @g01 pkt ∈ PKT
-      @g02 pkt ∈ ran(destBuff)
-  end
-
-  event isNot_In_Range_destBuff
-    any pkt
-    where
-      @g01 pkt ∈ PKT
-      @g02 pkt ∉ ran(destBuff)
-  end
-
   event clear_recvdBuff
     any x pkt
     where
@@ -200,6 +175,31 @@ events
       @a01 ctlNeighbours ≔ ctlNeighbours ∪ ({pkt} × nbrs)
       @a02 sentDown ≔ sentDown \ {x ↦ pkt}
       @a03 sentUp ≔ sentUp ∪ {x ↦ pkt}
+  end
+
+  event remove_destBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ∈ Dests
+      @g04 x ↦ pkt ∈ destBuff
+    then
+      @a01 destBuff ≔ destBuff \ {x ↦ pkt}
+  end
+
+  event is_In_Range_destBuff
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 pkt ∈ ran(destBuff)
+  end
+
+  event isNot_In_Range_destBuff
+    any pkt
+    where
+      @g01 pkt ∈ PKT
+      @g02 pkt ∉ ran(destBuff)
   end
 
 end

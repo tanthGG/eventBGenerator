@@ -13,15 +13,26 @@
   </header>
 
   <main>
-    <section>
-      <h2>Available Patterns</h2>
-      <p id="refinement-count" class="refinement-count">Next refinement: 1</p>
-      <div id="pattern-list" class="pattern-list"></div>
+    <section class="refinement-config">
+      <h2>Refinement Setup</h2>
+      <form id="refinement-form" class="refinement-form">
+        <label for="refinement-count-input">How many refinements would you like to generate?</label>
+        <div class="refinement-input-row">
+          <input id="refinement-count-input" name="refinement-count" type="number" min="1" max="20" placeholder="e.g. 3" required>
+          <button type="submit">Apply</button>
+          <button id="clear-refinement-btn" class="secondary-btn" type="button">Reset</button>
+        </div>
+      </form>
+    </section>
+
+    <section id="pattern-container" class="pattern-container" hidden>
+      <h2>Select Patterns</h2>
+      <p class="pattern-hint">Choose one or more node patterns for each refinement step.</p>
+      <div id="refinement-groups"></div>
     </section>
 
     <section class="actions">
-      <button id="generate-btn" disabled>Generate Event-B Bundle</button>
-      <button id="reset-refinement-btn" class="secondary-btn" type="button">Reset Refinement</button>
+      <button id="generate-btn" disabled>Generate Event-B Files</button>
       <span id="status" class="status"></span>
     </section>
   </main>

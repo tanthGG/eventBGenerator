@@ -1,5 +1,6 @@
 package app;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,5 +44,16 @@ public class GenerationService {
     EventBIR ir = compose(patternXmls);
     writer.write(projectDir, ir);
     rodinService.refresh(projectDir);
+  }
+
+  public Path writeToProject(String projectName, EventBIR ir) throws IOException {
+    Path projectDir = rodinService.ensureProject(projectName);
+    writer.write(projectDir, ir);
+    rodinService.refresh(projectDir);
+    return projectDir.resolve("machine" + ir.refinement());
+  }
+
+  public Path workspaceRoot() {
+    return rodinService.workspace();
   }
 }
