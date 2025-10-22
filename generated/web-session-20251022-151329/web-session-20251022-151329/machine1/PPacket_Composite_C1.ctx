@@ -1,0 +1,19 @@
+context PPacket_Composite_C1
+sets
+  PKT
+
+constants
+  ND
+  Dests
+  initialSrcAddr
+  finalDestAddr
+
+axioms
+  @ax01 finalDestAddr ∈ ℙ(PKT × ℤ)
+  @ax02 ND ⊆ ℕ
+  @ax03 finite(ND)
+  @ax04 Dests ⊆ ND
+  @ax05 finite(PKT)
+  @ax06 initialSrcAddr ∈ PKT → ND
+
+end

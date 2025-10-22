@@ -95,6 +95,8 @@ function createRefinementGroup(selection, index) {
   const list = document.createElement('div');
   list.className = 'pattern-list';
 
+  const inherited = collectInheritedPatterns(index);
+
   availablePatterns.forEach((name) => {
     const label = document.createElement('label');
     label.className = 'pattern-item';
@@ -102,20 +104,33 @@ function createRefinementGroup(selection, index) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.value = name;
-    checkbox.checked = selection.has(name);
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) {
-        selection.add(name);
-      } else {
-        selection.delete(name);
-      }
-      updateGenerateState();
-    });
 
-    const span = document.createElement('span');
-    span.textContent = name;
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = name;
 
-    label.append(checkbox, span);
+    if (inherited.has(name)) {
+      checkbox.checked = true;
+      checkbox.disabled = true;
+      checkbox.tabIndex = -1;
+      label.classList.add('inherited');
+      const badge = document.createElement('span');
+      badge.className = 'tag';
+      badge.textContent = 'Inherited';
+      label.append(checkbox, nameSpan, badge);
+    } else {
+      checkbox.checked = selection.has(name);
+      checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+          selection.add(name);
+        } else {
+          selection.delete(name);
+        }
+        updateGenerateState();
+        renderRefinementGroups();
+      });
+      label.append(checkbox, nameSpan);
+    }
+
     list.appendChild(label);
   });
 
@@ -125,10 +140,11 @@ function createRefinementGroup(selection, index) {
 
 function updateGenerateState() {
   const hasPatterns = availablePatterns.length > 0;
-  const ready =
-    hasPatterns &&
-    refinementSelections.length > 0 &&
-    refinementSelections.every((set) => set.size > 0);
+  const hasRefinements = refinementSelections.length > 0;
+  const cumulativeValid =
+    hasRefinements &&
+    refinementSelections.every((_, idx) => collectCumulativePatterns(idx).size > 0);
+  const ready = hasPatterns && hasRefinements && cumulativeValid;
   generateBtn.disabled = !ready;
 }
 
@@ -147,16 +163,16 @@ function showStatus(message, isError = false) {
 
 async function handleGenerate() {
   const ready =
+    availablePatterns.length > 0 &&
     refinementSelections.length > 0 &&
-    refinementSelections.every((set) => set.size > 0) &&
-    availablePatterns.length > 0;
+    refinementSelections.every((_, idx) => collectCumulativePatterns(idx).size > 0);
   if (!ready) {
     showStatus('Select at least one pattern for each refinement before generating.', true);
     return;
   }
 
   const payload = {
-    refinements: refinementSelections.map((set) => Array.from(set)),
+    refinements: buildRefinementPayload(),
   };
 
   generateBtn.disabled = true;
@@ -200,6 +216,30 @@ async function handleGenerate() {
   } finally {
     updateGenerateState();
   }
+}
+
+function collectInheritedPatterns(index) {
+  const inherited = new Set();
+  for (let i = 0; i < index; i += 1) {
+    refinementSelections[i].forEach((pattern) => inherited.add(pattern));
+  }
+  return inherited;
+}
+
+function collectCumulativePatterns(index) {
+  const cumulative = collectInheritedPatterns(index);
+  if (refinementSelections[index]) {
+    refinementSelections[index].forEach((pattern) => cumulative.add(pattern));
+  }
+  return cumulative;
+}
+
+function buildRefinementPayload() {
+  const cumulative = new Set();
+  return refinementSelections.map((selection) => {
+    selection.forEach((pattern) => cumulative.add(pattern));
+    return Array.from(cumulative);
+  });
 }
 
 function parseFilesHeader(header) {
