@@ -12,8 +12,6 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -29,6 +27,7 @@ public class WebServer {
   private static final Pattern QUOTED_VALUE = Pattern.compile("\"([^\"]+)\"");
   private static final Pattern PROJECT_NAME =
       Pattern.compile("\"projectName\"\\s*:\\s*\"([^\"]+)\"");
+  private static final String DEFAULT_PROJECT_NAME = "Refinement_Model_Generated";
 
   private final GenerationService generationService;
   private final Path projectRoot;
@@ -95,7 +94,7 @@ public class WebServer {
 
     String projectName = sanitizeProjectName(request.projectName());
     if (projectName.isBlank()) {
-      projectName = defaultProjectName();
+      projectName = DEFAULT_PROJECT_NAME;
     }
 
     List<EventBIR> generatedIrs = new ArrayList<>();
@@ -158,7 +157,8 @@ public class WebServer {
       return;
     }
 
-    String downloadName = projectName.isBlank() ? "eventb-artifacts.zip" : projectName + ".zip";
+    String downloadBase = projectName.isBlank() ? DEFAULT_PROJECT_NAME : projectName;
+    String downloadName = downloadBase + ".zip";
     String safeProjectPath = sanitizeHeaderValue(projectPath);
     String safeProjectName = sanitizeHeaderValue(projectName);
     String filesHeader = zipPayload.entries().stream()
@@ -186,8 +186,7 @@ public class WebServer {
   }
 
   private String defaultProjectName() {
-    return "web-session-" + DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
-        .format(LocalDateTime.now());
+    return DEFAULT_PROJECT_NAME;
   }
 
   private String relativizeForResponse(Path root, Path target) {
@@ -211,9 +210,7 @@ public class WebServer {
     if (irs == null || irs.isEmpty()) {
       throw new IOException("No artefacts available for zipping");
     }
-    String root = projectName.isBlank() ? "eventb-artifacts" : projectName;
-    root = root.replaceAll("[/\\\\]+", "-");
-    if (root.isBlank()) root = "eventb-artifacts";
+    String root = DEFAULT_PROJECT_NAME;
     if (!root.endsWith("/")) root = root + "/";
 
     EventBIR last = irs.get(irs.size() - 1);
