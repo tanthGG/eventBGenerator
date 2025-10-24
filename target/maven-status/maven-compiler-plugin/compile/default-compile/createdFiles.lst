@@ -21,4 +21,5 @@ app/WebServer.class
 app/WebServer$GenerateRequest.class
 app/WebServer$StaticHandler.class
 app/PatternCombinationEngine.class
+app/WebServer$ZipPayload.class
 app/PatternModel$Action.class

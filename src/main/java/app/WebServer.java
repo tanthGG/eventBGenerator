@@ -15,9 +15,7 @@ import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -100,8 +98,7 @@ public class WebServer {
       projectName = defaultProjectName();
     }
 
-    List<Path> generatedFilePaths = new ArrayList<>();
-    List<String> fileSummaries = new ArrayList<>();
+    List<EventBIR> generatedIrs = new ArrayList<>();
     int refinementIndex = 1;
 
     for (List<String> fileNames : refinements) {
@@ -138,12 +135,14 @@ public class WebServer {
 
       Path ctxPath = machineDir.resolve(ir.ctxName() + ".ctx");
       Path machPath = machineDir.resolve(ir.machName() + ".bcm");
-      generatedFilePaths.add(ctxPath);
-      generatedFilePaths.add(machPath);
-      fileSummaries.add(relativizeForResponse(workspace, ctxPath));
-      fileSummaries.add(relativizeForResponse(workspace, machPath));
+      generatedIrs.add(ir);
 
       refinementIndex++;
+    }
+
+    if (generatedIrs.isEmpty()) {
+      send(exchange, 500, "No artefacts produced", "text/plain");
+      return;
     }
 
     Path projectDir = workspace.resolve(projectName);
@@ -151,9 +150,9 @@ public class WebServer {
     if (projectPath.isEmpty()) {
       projectPath = relativizeForResponse(workspace, projectDir);
     }
-    byte[] archive;
+    ZipPayload zipPayload;
     try {
-      archive = zipGeneratedFiles(projectName, generatedFilePaths, workspace);
+      zipPayload = zipGeneratedFiles(projectName, generatedIrs);
     } catch (IOException e) {
       send(exchange, 500, "Failed to assemble download: " + e.getMessage(), "text/plain");
       return;
@@ -162,7 +161,7 @@ public class WebServer {
     String downloadName = projectName.isBlank() ? "eventb-artifacts.zip" : projectName + ".zip";
     String safeProjectPath = sanitizeHeaderValue(projectPath);
     String safeProjectName = sanitizeHeaderValue(projectName);
-    String filesHeader = fileSummaries.stream()
+    String filesHeader = zipPayload.entries().stream()
         .map(this::sanitizeHeaderValue)
         .filter(s -> !s.isEmpty())
         .collect(Collectors.joining(";"));
@@ -180,9 +179,9 @@ public class WebServer {
       exchange.getResponseHeaders().set("X-Generated-Files", filesHeader);
     }
 
-    exchange.sendResponseHeaders(200, archive.length);
+    exchange.sendResponseHeaders(200, zipPayload.data().length);
     try (OutputStream os = exchange.getResponseBody()) {
-      os.write(archive);
+      os.write(zipPayload.data());
     }
   }
 
@@ -207,55 +206,41 @@ public class WebServer {
     return absoluteTarget.toString().replace('\\', '/');
   }
 
-  private byte[] zipGeneratedFiles(String projectName, List<Path> generatedFiles, Path workspace)
+  private ZipPayload zipGeneratedFiles(String projectName, List<EventBIR> irs)
       throws IOException {
+    if (irs == null || irs.isEmpty()) {
+      throw new IOException("No artefacts available for zipping");
+    }
     String root = projectName.isBlank() ? "eventb-artifacts" : projectName;
     root = root.replaceAll("[/\\\\]+", "-");
     if (root.isBlank()) root = "eventb-artifacts";
     if (!root.endsWith("/")) root = root + "/";
 
-    Path absWorkspace = workspace != null ? workspace.toAbsolutePath().normalize() : null;
+    EventBIR last = irs.get(irs.size() - 1);
+    List<String> entries = new ArrayList<>();
 
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
          ZipOutputStream zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
-      Set<String> addedDirs = new HashSet<>();
       zip.putNextEntry(new ZipEntry(root));
       zip.closeEntry();
-      addedDirs.add(root);
 
-      for (Path file : generatedFiles) {
-        Path normalized = file.toAbsolutePath().normalize();
-        if (!Files.exists(normalized) || !Files.isRegularFile(normalized)) {
-          continue;
-        }
-        String relative = normalized.getFileName().toString();
-        if (absWorkspace != null && normalized.startsWith(absWorkspace)) {
-          relative = absWorkspace.relativize(normalized).toString().replace('\\', '/');
-        }
-        String entryName = root + relative;
-        ensureDirectoryEntries(zip, addedDirs, entryName);
+      String ctxEntry = root + "Context_Machine.ctx";
+      entries.add(ctxEntry);
+      zip.putNextEntry(new ZipEntry(ctxEntry));
+      zip.write(last.ctxText().getBytes(StandardCharsets.UTF_8));
+      zip.closeEntry();
+
+      for (int i = 0; i < irs.size(); i++) {
+        EventBIR ir = irs.get(i);
+        String entryName = root + "M" + (i + 1) + ".bcm";
+        entries.add(entryName);
         zip.putNextEntry(new ZipEntry(entryName));
-        try (InputStream in = Files.newInputStream(normalized)) {
-          in.transferTo(zip);
-        }
+        zip.write(ir.machineText().getBytes(StandardCharsets.UTF_8));
         zip.closeEntry();
       }
 
       zip.finish();
-      return baos.toByteArray();
-    }
-  }
-
-  private void ensureDirectoryEntries(ZipOutputStream zip, Set<String> addedDirs, String entryName)
-      throws IOException {
-    int index = entryName.lastIndexOf('/');
-    while (index > 0) {
-      String dir = entryName.substring(0, index + 1);
-      if (addedDirs.add(dir)) {
-        zip.putNextEntry(new ZipEntry(dir));
-        zip.closeEntry();
-      }
-      index = dir.lastIndexOf('/', dir.length() - 2);
+      return new ZipPayload(baos.toByteArray(), entries);
     }
   }
 
@@ -365,6 +350,8 @@ public class WebServer {
       }
     }
   }
+
+  private record ZipPayload(byte[] data, List<String> entries) {}
 
   private record GenerateRequest(String projectName, List<List<String>> refinements) {}
 }

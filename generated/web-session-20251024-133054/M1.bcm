@@ -1,0 +1,99 @@
+machine PPacket_Composite_M1
+sees PPacket_Composite_C1
+
+variables
+  pktFwdr
+  pktData
+  createdPkts
+  recvBuff
+  clrRecvBuffFlg
+
+invariants
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
+  @inv03 createdPkts ⊆ PKT
+  @inv04 recvBuff ∈ ND ↔ PKT
+  @inv05 clrRecvBuffFlg ∈ ND ↔ PKT
+
+events
+  event INITIALISATION
+    then
+      @int01 pktFwdr ≔ ∅
+      @int02 pktData ≔ ∅
+      @int03 createdPkts ≔ ∅
+      @int04 recvBuff ≔ ∅
+      @int05 clrRecvBuffFlg ≔ ∅
+  end
+
+  event creating_Pkt
+    any x des pkt data
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 pkt ∈ PKT
+      @g03 data ∈ ℤ
+      @g04 x = initialSrcAddr(pkt)
+      @g05 des = ran({pkt} ◁ finalDestAddr)
+      @g06 pkt ∉ dom(pktFwdr)
+      @g07 pkt ∉ dom(pktData)
+    then
+      @a01 createdPkts ≔ createdPkts ∪ {pkt}
+      @a02 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}
+      @a03 pktData ≔ pktData ∪ {pkt ↦ data}
+  end
+
+  event set_pktFwdr
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 pkt ∈ dom(pktFwdr)
+    then
+      @a01 pktFwdr ≔ pktFwdr <+ {pkt ↦ x}
+  end
+
+  event receive
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∉ recvBuff
+    then
+      @a01 recvBuff ≔ recvBuff ∪ {x ↦ pkt}
+  end
+
+  event fwdr_receive_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∉ clrRecvBuffFlg
+      @g05 x ∉ Dests
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+  end
+
+  event dest_recv_pkts
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ∈ Dests
+      @g05 x ↦ pkt ∉ clrRecvBuffFlg
+    then
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
+  end
+
+  event clear_recvdBuff
+    any x pkt
+    where
+      @g01 x ∈ ND
+      @g02 pkt ∈ PKT
+      @g03 x ↦ pkt ∈ recvBuff
+      @g04 x ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @a01 recvBuff ≔ recvBuff \ {x ↦ pkt}
+  end
+
+end
