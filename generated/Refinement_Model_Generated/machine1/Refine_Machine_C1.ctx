@@ -1,0 +1,25 @@
+context Refine_Machine_C1
+sets
+  PKT
+  TYPE
+
+constants
+  ND
+  Dests
+  initialSrcAddr
+  finalDestAddr
+  type
+  DATA
+
+axioms
+  @ax01 ND ⊆ ℕ
+  @ax02 finite(ND)
+  @ax03 Dests ⊆ ND
+  @ax04 finite(PKT)
+  @ax05 initialSrcAddr ∈ PKT → ND
+  @ax06 finalDestAddr ∈ ℙ(PKT × ℤ)
+  @ax07 ND ⊆ ℕ ∧ finite(ND)
+  @ax08 DATA ∈ TYPE
+  @ax09 type ∈ PKT → TYPE
+
+end
