@@ -19,7 +19,7 @@ public final class PatternCombinationEngine {
 
   private static final List<Rule> RULES = List.of(
       rule(
-          "creating_Pkt",
+          "creating_pkt",
           ref("PPacket", "creating_Pkt"),
           ref("PNDBuffer", "record_ndBuff")),
       rule(
@@ -28,23 +28,29 @@ public final class PatternCombinationEngine {
           ref("PNDBuffer", "remove_ndBuff"),
           ref("PPacket", "set_pktFwdr")),
       rule(
+          "send_down",
+          ref("PSend", "send_down")),
+      rule(
+          "send_up",
+          ref("PSend", "send_up")),
+      rule(
           "receive",
           ref("PReceive", "receive"),
           ref("PSend", "remove_ctlNeighbours")),
       rule(
-          "fwdr_receive_pkts",
+          "fwdr_receive_pkt",
           ref("PReceive", "fwdr_receive_pkts"),
           ref("PNDBuffer", "record_ndBuff")),
       rule(
-          "dest_recv_pkts",
+          "dest_receive_pkt",
           ref("PReceive", "dest_recv_pkts"),
           ref("PDestBuffer", "record_destBuff")),
       rule(
-          "finish_tx_pkts",
+          "finish_tx_pkt",
           ref("PSend", "finish_tx_pkts"),
           ref("PNDBuffer", "is_In_Range_ndBuff")),
       rule(
-          "final_tx_pkts",
+          "final_tx_pkt",
           ref("PSend", "final_tx_pkts"),
           ref("PNDBuffer", "isNot_In_Range_ndBuff"))
   );
