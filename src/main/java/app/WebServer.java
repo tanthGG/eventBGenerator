@@ -98,7 +98,7 @@ public class WebServer {
     }
 
     List<EventBIR> generatedIrs = new ArrayList<>();
-    int refinementIndex = 1;
+    int refinementIndex = 0;
 
     for (List<String> fileNames : refinements) {
       if (fileNames == null || fileNames.isEmpty()) {

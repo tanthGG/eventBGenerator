@@ -48,9 +48,14 @@ public class GenerationService {
 
   public Path writeToProject(String projectName, EventBIR ir) throws IOException {
     Path projectDir = rodinService.ensureProject(projectName);
+    if (ir.refinement() == 0) {
+      writer.clearProject(projectDir);
+    } else {
+      writer.removeContextFiles(projectDir);
+    }
     writer.write(projectDir, ir);
     rodinService.refresh(projectDir);
-    return projectDir.resolve("machine" + ir.refinement());
+    return projectDir;
   }
 
   public Path workspaceRoot() {

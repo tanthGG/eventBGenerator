@@ -22,32 +22,6 @@ public class EventBMapper {
           "finish_tx_pkt",
           "final_tx_pkt");
 
-  private static final String[] PSENSING_REFINEMENT_VARIABLES = {
-    "pktFwdr",
-    "pktData",
-    "createdPkts",
-    "waitingBuff",
-    "sentDown",
-    "sentUp",
-    "ctlNeighbours",
-    "destBuff",
-    "recvBuff",
-    "clrRecvBuffFlg"
-  };
-
-  private static final String[][] PSENSING_REFINEMENT_EVENTS = {
-    {"creatingDataPacket", "refines creatingPkt"},
-    {"creatingControlPacket", "refines creatingPkt"},
-    {"start_tx", "extends start_tx"},
-    {"send_down", "extends send_down"},
-    {"send_up", "extends send_up"},
-    {"receive", "extends receive"},
-    {"clear_recvdBuff", "extends clear_recvdBuff"},
-    {"fwdr_receive_pkt", "extends fwdr_receive_pkt"},
-    {"dest_recv_pkt", "extends dest_recv_pkt"},
-    {"finish_tx_pkt", "extends finish_tx_pkt"}
-  };
-
   public EventBIR toEventB(PatternModel m, int refinement) {
     String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
     int refIndex = Math.max(refinement, 0);
@@ -104,11 +78,6 @@ public class EventBMapper {
 
     ctxSb.append("end\n");
 
-    if (includesPSensing && level > 1) {
-      String machineText = buildPSensingRefinementSkeleton(machName, ctxName, parentMachine);
-      return new EventBIR(baseName, refIndex, ctxName, machName, ctxSb.toString(), machineText);
-    }
-
     StringBuilder sb = new StringBuilder();
     sb.append("MACHINE ").append(machName).append("\n");
     if (parentMachine != null) {
@@ -145,7 +114,7 @@ public class EventBMapper {
 
     if (initEvent != null) {
       sb.append("  event INITIALISATION\n");
-      if (refIndex > 1) {
+      if (refIndex > 0) {
         sb.append("    extends INITIALISATION\n");
       }
       sb.append("    then\n");
@@ -156,7 +125,7 @@ public class EventBMapper {
       sb.append("  end\n\n");
     } else {
       sb.append("  event INITIALISATION\n");
-      if (refIndex > 1) {
+      if (refIndex > 0) {
         sb.append("    extends INITIALISATION\n");
       }
       sb.append("    then\n      @int01 skip\n  end\n\n");
@@ -165,7 +134,7 @@ public class EventBMapper {
     for (var e : m.events) {
       if (initEvent != null && e == initEvent) continue;
       sb.append("  event ").append(e.name).append("\n");
-      if (refIndex > 1) {
+      if (refIndex > 0) {
         String clause = refinementClauseForEvent(e.name);
         if (clause != null) {
           sb.append("    ").append(clause).append("\n");
@@ -259,38 +228,5 @@ public class EventBMapper {
       return "extends " + eventName;
     }
     return null;
-  }
-
-  private static String buildPSensingRefinementSkeleton(
-      String machName, String ctxName, String parentMachine) {
-    StringBuilder sb = new StringBuilder();
-    sb.append("MACHINE ").append(machName).append("\n");
-    if (parentMachine != null) {
-      sb.append("REFINES ").append(parentMachine).append("\n");
-    }
-    sb.append("SEES ").append(ctxName).append("\n\n");
-    sb.append("VARIABLES\n");
-    for (String var : PSENSING_REFINEMENT_VARIABLES) {
-      sb.append("  ").append(var).append("\n");
-    }
-    sb.append("\nEVENTS\n");
-    sb.append("  Initialisation\n");
-    sb.append("    extends\n");
-    sb.append("    begin\n");
-    sb.append("      skip\n");
-    sb.append("    end\n\n");
-    for (int i = 0; i < PSENSING_REFINEMENT_EVENTS.length; i++) {
-      String[] event = PSENSING_REFINEMENT_EVENTS[i];
-      sb.append("Event ").append(event[0]).append(" ≙\n");
-      sb.append(event[1]).append("\n");
-      sb.append("then\n");
-      sb.append("  skip\n");
-      sb.append("end");
-      if (i < PSENSING_REFINEMENT_EVENTS.length - 1) {
-        sb.append("\n\n");
-      }
-    }
-    sb.append("\n\nend\n");
-    return sb.toString();
   }
 }
