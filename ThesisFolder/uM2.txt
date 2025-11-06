@@ -1,5 +1,6 @@
-MACHINE pM1
-SEES cM1
+MACHINE uM2
+REFINES pM1
+SEES cM2
 
 VARIABLES
   pktFwdr
@@ -13,34 +14,47 @@ VARIABLES
   recvBuff
   clrRecvBuffFlg
 
-INVARIANTS
-  MPacket_inv_1 : pktFwdr ∈ PKT ⇸ ND
-  MPacket_inv_2 : pktData ∈ PKT ⇸ ℤ
-  MPacket_inv_3 : createdPkts ⊆ PKT
-  MWaitingBuff_inv_1 : waitingBuff ∈ ND ↔ PKT
-  MSend_inv_1 : sentUp ∈ ND ↔ PKT
-  MSend_inv_2 : sentDown ∈ ND ↔ PKT
-  MSend_inv_3 : ctlNeighbours ∈ PKT ↔ ND
-  MDestBuffer_inv_1 : destBuff ∈ Dests ↔ PKT
-  MReceive_inv_1 : recvBuff ∈ ND ↔ PKT
-  MReceive_inv_2 : clrRecvBuffFlg ∈ ND ↔ PKT
-
 EVENTS
   Initialisation
+    extends
     begin
-      MPacket_int_1 : pktFwdr ≔ ∅
-      MPacket_int_2 : pktData ≔ ∅
-      MPacket_int_3 : createdPkts ≔ ∅
-      MWaitingBuff_int_1 : waitingBuff ≔ ∅
-      MSend_int_1 : sentUp ≔ ∅
-      MSend_int_2 : sentDown ≔ ∅
-      MSend_int_3 : ctlNeighbours ≔ ∅
-      MDestBuffer_int_1 : destBuff ≔ ∅
-      MReceive_int_1 : recvBuff ≔ ∅
-      MReceive_int_2 : clrRecvBuffFlg ≔ ∅
+      MPacket_int_1 : pktFwdr := ∅
+      MPacket_int_2 : pktData := ∅
+      MPacket_int_3 : createdPkts := ∅
+      MWaitingBuff_int_1 : waitingBuff := ∅
+      MSend_int_1 : sentUp := ∅
+      MSend_int_2 : sentDown := ∅
+      MSend_int_3 : ctlNeighbours := ∅
+      MDestBuffer_int_1 : destBuff := ∅
+      MReceive_int_1 : recvBuff := ∅
+      MReceive_int_2 : clrRecvBuffFlg := ∅
     end
 
-Event creatingPkt ≙
+Event creatingDataPacket ≙
+refines creatingPkt
+
+any
+  x
+  des
+  pkt
+  data
+where
+  MPacket_creating_pkt_g1 : x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+  MPacket_creating_pkt_g2 : x = initialSrc(pkt) ∧ des = ran({pkt} ◁ finalDest)
+  MPacket_creating_pkt_g3 : pkt ∉ dom(pktFwdr)
+  MPacket_creating_pkt_g4 : pkt ∉ dom(pktData)
+  MwaitingBuff_record_waitingBuff_g1 : x ↦ pkt ∉ waitingBuff
+  User_defined_guard_g1 : type(pkt) = DATA
+then
+  MPacket_creating_pkt_a1 : createdPkts := createdPkts ∪ {pkt}
+  MPacket_creating_pkt_a2 : pktFwdr := pktFwdr ∪ {pkt ↦ x}
+  MPacket_creating_pkt_a3 : pktData := pktData ∪ {pkt ↦ data}
+  MwaitingBuff_record_waitingBuff_a1 : waitingBuff := waitingBuff ∪ {x ↦ pkt}
+end
+
+Event creatingControlPacket ≙
+refines creatingPkt
+
 any
   x
   des
@@ -52,6 +66,8 @@ where
   MPacket_creating_pkt_g3 : pkt ∉ dom(pktFwdr)
   MPacket_creating_pkt_g4 : pkt ∉ dom(pktData)
   MWaitingBuff_record_waitingBuff_g1 : x ↦ pkt ∉ waitingBuff
+  User_defined_guard_g1 : data = CTL_VAL
+  User_defined_guard_g2 : type(pkt) ∈ CONTROL
 then
   MPacket_creating_pkt_a1 : createdPkts := createdPkts ∪ {pkt}
   MPacket_creating_pkt_a2 : pktFwdr := pktFwdr ∪ {pkt ↦ x}
@@ -60,6 +76,8 @@ then
 end
 
 Event start_tx ≙
+extends start_tx
+
 any
   x
   pkt
@@ -70,11 +88,13 @@ where
   MWaitingBuff_remove_waitingBuff_g1 : x ↦ pkt ∈ waitingBuff
 then
   MISend_start_tx_a1 : sentDown := sentDown ∪ {x ↦ pkt}
-  MPacket_set_pktFwdr_a2 : pktFwdr ≔ pktFwdr ⩤ {pkt ↦ x}
+  MPacket_set_pktFwdr_a2 : pktFwdr := pktFwdr ⩤ {pkt ↦ x}
   MWaitingBuff_remove_waitingBuff_a1 : waitingBuff := waitingBuff \ {x ↦ pkt}
 end
 
 Event send_down ≙
+extends send_down
+
 any
   x
   pkt
@@ -86,6 +106,8 @@ then
 end
 
 Event send_up ≙
+extends send_up
+
 any
   x
   pkt
@@ -103,6 +125,8 @@ then
 end
 
 Event receive ≙
+extends receive
+
 any
   x
   pkt
@@ -118,6 +142,8 @@ then
 end
 
 Event clear_recvdBuff ≙
+extends clear_recvdBuff
+
 any
   x
   pkt
@@ -130,6 +156,8 @@ then
 end
 
 Event fwdr_receive_pkt ≙
+extends fwdr_receive_pkt
+
 any
   x
   pkt
@@ -145,6 +173,8 @@ then
 end
 
 Event dest_recv_pkt ≙
+extends dest_recv_pkt
+
 any
   nb
   pkt
@@ -160,6 +190,8 @@ then
 end
 
 Event finish_tx_pkt ≙
+extends finish_tx_pkt
+
 any
   x
   pkt
@@ -169,19 +201,8 @@ where
   MSend_finish_tx_pkt_g3 : pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)
   MSend_finish_tx_pkt_g4 : x ∈ dom(sentUp)
   MSend_finish_tx_pkt_g5 : x ↦ pkt ∈ sentUp
-  MwaitingBuffer_is_InRange_waitingBuff_g1 : pkt ∈ ran(waitingBuff)
 then
   MSend_finish_tx_pkt_a1 : sentUp := sentUp \ {x ↦ pkt}
 end
 
-Event final_tx_pkt ≙
-any
-  pkt
-where
-  MSend_final_tx_pkt_g1 : pkt ∈ PKT
-  MSend_final_tx_pkt_g2 : {pkt} ◁ ctlNeighbours = ∅
-  MSend_final_tx_pkt_g3 : pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)
-  MwaitingBuffer_isNot_InRange_waitingBuff_g1 : pkt ∉ ran(waitingBuff)
-then
-  MSend_final_tx_pkt_a1 : sentUp := sentUp ⩤ {pkt}
-end
+END

@@ -1,12 +1,75 @@
 package app;
 
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
 public class EventBMapper {
+  private static final Map<String, String> EVENT_REFINES =
+      Map.ofEntries(
+          Map.entry("creatingdatapacket", "creatingPkt"),
+          Map.entry("creatingcontrolpacket", "creatingPkt"));
+
+  private static final Set<String> EVENT_EXTENDS =
+      Set.of(
+          "start_tx",
+          "send_down",
+          "send_up",
+          "receive",
+          "fwdr_receive_pkt",
+          "dest_receive_pkt",
+          "clear_recvdbuff",
+          "finish_tx_pkt",
+          "final_tx_pkt");
+
+  private static final String[] PSENSING_REFINEMENT_VARIABLES = {
+    "pktFwdr",
+    "pktData",
+    "createdPkts",
+    "waitingBuff",
+    "sentDown",
+    "sentUp",
+    "ctlNeighbours",
+    "destBuff",
+    "recvBuff",
+    "clrRecvBuffFlg"
+  };
+
+  private static final String[][] PSENSING_REFINEMENT_EVENTS = {
+    {"creatingDataPacket", "refines creatingPkt"},
+    {"creatingControlPacket", "refines creatingPkt"},
+    {"start_tx", "extends start_tx"},
+    {"send_down", "extends send_down"},
+    {"send_up", "extends send_up"},
+    {"receive", "extends receive"},
+    {"clear_recvdBuff", "extends clear_recvdBuff"},
+    {"fwdr_receive_pkt", "extends fwdr_receive_pkt"},
+    {"dest_recv_pkt", "extends dest_recv_pkt"},
+    {"finish_tx_pkt", "extends finish_tx_pkt"}
+  };
+
   public EventBIR toEventB(PatternModel m, int refinement) {
     String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
     int refIndex = Math.max(refinement, 0);
     boolean includesPSensing = includesPattern(m, "PSensingUnit");
-    String ctxName = includesPSensing ? "Refine_Machine_C" + refIndex : baseName + "_C" + refIndex;
-    String machName = includesPSensing ? "Refine_Machine_M" + refIndex : baseName + "_M" + refIndex;
+    int level = refIndex + 1;
+    String ctxName;
+    String machName;
+    if (includesPSensing) {
+      ctxName = "cM" + level;
+      machName = level == 1 ? "pM1" : "uM" + level;
+    } else {
+      ctxName = baseName + "_C" + refIndex;
+      machName = baseName + "_M" + refIndex;
+    }
+    String parentMachine = null;
+    if (refIndex > 0) {
+      if (includesPSensing) {
+        parentMachine = level == 2 ? "pM1" : "uM" + (level - 1);
+      } else {
+        parentMachine = baseName + "_M" + (refIndex - 1);
+      }
+    }
 
     StringBuilder ctxSb = new StringBuilder();
     ctxSb.append("context ").append(ctxName).append("\n");
@@ -41,20 +104,28 @@ public class EventBMapper {
 
     ctxSb.append("end\n");
 
+    if (includesPSensing && level > 1) {
+      String machineText = buildPSensingRefinementSkeleton(machName, ctxName, parentMachine);
+      return new EventBIR(baseName, refIndex, ctxName, machName, ctxSb.toString(), machineText);
+    }
+
     StringBuilder sb = new StringBuilder();
-    sb.append("machine ").append(machName).append("\n")
-      .append("sees ").append(ctxName).append("\n\n");
+    sb.append("MACHINE ").append(machName).append("\n");
+    if (parentMachine != null) {
+      sb.append("REFINES ").append(parentMachine).append("\n");
+    }
+    sb.append("SEES ").append(ctxName).append("\n\n");
 
     // Variables
     if (!m.variables.isEmpty()) {
-      sb.append("variables\n");
+      sb.append("VARIABLES\n");
       for (var v : m.variables) sb.append("  ").append(v.name).append("\n");
       sb.append("\n");
     }
 
     // Invariants
     if (!m.invariants.isEmpty()) {
-      sb.append("invariants\n");
+      sb.append("INVARIANTS\n");
       int i = 0;
       for (var inv : m.invariants)
         sb.append(String.format("  @inv%02d %s\n", ++i, inv.expression));
@@ -62,7 +133,7 @@ public class EventBMapper {
     }
 
     // Events
-    sb.append("events\n");
+    sb.append("EVENTS\n");
 
     PatternModel.Event initEvent = null;
     for (var e : m.events) {
@@ -74,6 +145,9 @@ public class EventBMapper {
 
     if (initEvent != null) {
       sb.append("  event INITIALISATION\n");
+      if (refIndex > 1) {
+        sb.append("    extends INITIALISATION\n");
+      }
       sb.append("    then\n");
       int a = 0;
       for (var ac : initEvent.actions)
@@ -81,12 +155,22 @@ public class EventBMapper {
       if (a == 0) sb.append("      @int01 skip\n");
       sb.append("  end\n\n");
     } else {
-      sb.append("  event INITIALISATION\n    then\n      @int01 skip\n  end\n\n");
+      sb.append("  event INITIALISATION\n");
+      if (refIndex > 1) {
+        sb.append("    extends INITIALISATION\n");
+      }
+      sb.append("    then\n      @int01 skip\n  end\n\n");
     }
 
     for (var e : m.events) {
       if (initEvent != null && e == initEvent) continue;
       sb.append("  event ").append(e.name).append("\n");
+      if (refIndex > 1) {
+        String clause = refinementClauseForEvent(e.name);
+        if (clause != null) {
+          sb.append("    ").append(clause).append("\n");
+        }
+      }
       if (!e.params.isEmpty()) {
         sb.append("    any ");
         for (int i = 0; i < e.params.size(); i++) {
@@ -163,5 +247,50 @@ public class EventBMapper {
     }
 
     return false;
+  }
+
+  private static String refinementClauseForEvent(String eventName) {
+    if (eventName == null || eventName.isBlank()) return null;
+    String normalized = eventName.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    if (EVENT_REFINES.containsKey(normalized)) {
+      return "refines " + EVENT_REFINES.get(normalized);
+    }
+    if (EVENT_EXTENDS.contains(normalized)) {
+      return "extends " + eventName;
+    }
+    return null;
+  }
+
+  private static String buildPSensingRefinementSkeleton(
+      String machName, String ctxName, String parentMachine) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("MACHINE ").append(machName).append("\n");
+    if (parentMachine != null) {
+      sb.append("REFINES ").append(parentMachine).append("\n");
+    }
+    sb.append("SEES ").append(ctxName).append("\n\n");
+    sb.append("VARIABLES\n");
+    for (String var : PSENSING_REFINEMENT_VARIABLES) {
+      sb.append("  ").append(var).append("\n");
+    }
+    sb.append("\nEVENTS\n");
+    sb.append("  Initialisation\n");
+    sb.append("    extends\n");
+    sb.append("    begin\n");
+    sb.append("      skip\n");
+    sb.append("    end\n\n");
+    for (int i = 0; i < PSENSING_REFINEMENT_EVENTS.length; i++) {
+      String[] event = PSENSING_REFINEMENT_EVENTS[i];
+      sb.append("Event ").append(event[0]).append(" ≙\n");
+      sb.append(event[1]).append("\n");
+      sb.append("then\n");
+      sb.append("  skip\n");
+      sb.append("end");
+      if (i < PSENSING_REFINEMENT_EVENTS.length - 1) {
+        sb.append("\n\n");
+      }
+    }
+    sb.append("\n\nend\n");
+    return sb.toString();
   }
 }
