@@ -73,12 +73,13 @@
         <Parameters>
           <Param name="x" type="ND"/>
           <Param name="pkt" type="PKT"/>
-          <Param name="nbrs" type="ℙ(ND)"/>
+          <Param name="nbrs" type="{n ∣ n ∈ ℙ(ND)}"/>
         </Parameters>
         <Guards>
           <Guard expression="x ∈ ND"/>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="nbrs ∈ ℙ(ND) ∧ nbrs ≠ ∅"/>
+          
+          <Guard expression="nbrs ≠ ∅"/>
           <Guard expression="pkt ∉ dom(ctlNeighbours)"/>
           <Guard expression="x ↦ pkt ∉ sentUp"/>
           <Guard expression="x ↦ pkt ∈ sentDown"/>

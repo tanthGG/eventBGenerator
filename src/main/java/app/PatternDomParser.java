@@ -62,7 +62,7 @@ public class PatternDomParser {
     }
 
     PatternModel model = new PatternModel();
-    model.name = attrOr(patternEl, "name", model.name);
+    model.name = PatternNames.instantiate(attrOr(patternEl, "name", model.name));
 
     // Attach referenced context if present
     Element ctxRefEl = child(patternEl, "ContextRef");
@@ -183,6 +183,7 @@ public class PatternDomParser {
   private PatternModel parseLegacyPattern(Element root) {
     PatternModel model = new PatternModel();
     if (root.hasAttribute("name")) model.name = root.getAttribute("name").trim();
+    model.name = PatternNames.instantiate(model.name);
 
     // Context (optional, legacy inline)
     Element contextEl = child(root, "Context");

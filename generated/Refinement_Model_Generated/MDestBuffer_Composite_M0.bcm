@@ -1,35 +1,35 @@
-MACHINE PDestBuffer_Composite_M0
-SEES PDestBuffer_Composite_C0
+MACHINE MDestBuffer_Composite_M0
+SEES MDestBuffer_Composite_C0
 
 VARIABLES
-  destBuff
-  ndBuff
   pktFwdr
   pktData
   createdPkts
-  recvBuff
-  clrRecvBuffFlg
+  waitingBuff
   sentDown
   sentUp
+  destBuff
+  recvBuff
+  clrRecvBuffFlg
   ctlNeighbours
 
 INVARIANTS
-  @inv01 destBuff ∈ Dests ↔ PKT
-  @inv02 ndBuff ∈ ND ↔ PKT
-  @inv03 pktFwdr ∈ PKT ⇸ ND
-  @inv04 pktData ∈ PKT ⇸ ℤ
-  @inv05 createdPkts ⊆ PKT
-  @inv06 recvBuff ∈ ND ↔ PKT
-  @inv07 clrRecvBuffFlg ∈ ND ↔ PKT
-  @inv08 sentUp ∈ ND ↔ PKT
-  @inv09 sentDown ∈ ND ↔ PKT
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
+  @inv03 createdPkts ⊆ PKT
+  @inv04 waitingBuff ∈ ND ↔ PKT
+  @inv05 sentDown ∈ ND ↔ PKT
+  @inv06 sentUp ∈ ND ↔ PKT
+  @inv07 destBuff ∈ Dests ↔ PKT
+  @inv08 recvBuff ∈ ND ↔ PKT
+  @inv09 clrRecvBuffFlg ∈ PKT ↔ ND
   @inv10 ctlNeighbours ∈ PKT ↔ ND
 
 EVENTS
   event INITIALISATION
     then
       @int01 destBuff ≔ ∅
-      @int02 ndBuff ≔ ∅
+      @int02 waitingBuff ≔ ∅
       @int03 pktFwdr ≔ ∅
       @int04 pktData ≔ ∅
       @int05 createdPkts ≔ ∅
@@ -40,35 +40,17 @@ EVENTS
       @int10 ctlNeighbours ≔ ∅
   end
 
-  event creating_pkt
-    any x des pkt data
-    where
-      @g01 x ∈ ND \ Dests
-      @g02 pkt ∈ PKT
-      @g03 data ∈ ℤ
-      @g04 x = initialSrcAddr(pkt)
-      @g05 des = ran({pkt} ◁ finalDestAddr)
-      @g06 pkt ∉ dom(pktFwdr)
-      @g07 pkt ∉ dom(pktData)
-      @g08 x ↦ pkt ∉ ndBuff
-    then
-      @a01 createdPkts ≔ createdPkts ∪ {pkt}
-      @a02 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}
-      @a03 pktData ≔ pktData ∪ {pkt ↦ data}
-      @a04 ndBuff ≔ ndBuff ∪ {x ↦ pkt}
-  end
-
   event start_tx
     any x pkt
     where
       @g01 x ∈ ND
       @g02 pkt ∈ PKT
       @g03 x ↦ pkt ∉ sentDown
-      @g04 x ↦ pkt ∈ ndBuff
+      @g04 x ↦ pkt ∈ waitingBuff
       @g05 pkt ∈ dom(pktFwdr)
     then
       @a01 sentDown ≔ sentDown ∪ {x ↦ pkt}
-      @a02 ndBuff ≔ ndBuff \ {x ↦ pkt}
+      @a02 waitingBuff ≔ waitingBuff \ {x ↦ pkt}
       @a03 pktFwdr ≔ pktFwdr <+ {pkt ↦ x}
   end
 
@@ -83,10 +65,10 @@ EVENTS
   event send_up
     any x pkt nbrs
     where
-      @g01 nbrs ∈ ℙ(ND)
+      @g01 nbrs ∈ {n ∣ n ∈ ℙ(ND)}
       @g02 x ∈ ND
       @g03 pkt ∈ PKT
-      @g04 nbrs ∈ ℙ(ND) ∧ nbrs ≠ ∅
+      @g04 nbrs ≠ ∅
       @g05 pkt ∉ dom(ctlNeighbours)
       @g06 x ↦ pkt ∉ sentUp
       @g07 x ↦ pkt ∈ sentDown
@@ -119,24 +101,24 @@ EVENTS
       @g04 x ↦ pkt ∉ clrRecvBuffFlg
       @g05 x ∉ Dests
       @g06 x ∈ ND \ Dests
-      @g07 x ↦ pkt ∉ ndBuff
+      @g07 x ↦ pkt ∉ waitingBuff
     then
       @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
-      @a02 ndBuff ≔ ndBuff ∪ {x ↦ pkt}
+      @a02 waitingBuff ≔ waitingBuff ∪ {x ↦ pkt}
   end
 
-  event dest_receive_pkt
-    any x pkt
+  event dest_recv_pkt
+    any nb pkt
     where
-      @g01 x ∈ ND
+      @g01 nb ∈ ND
       @g02 pkt ∈ PKT
-      @g03 x ↦ pkt ∈ recvBuff
-      @g04 x ∈ Dests
-      @g05 x ↦ pkt ∉ clrRecvBuffFlg
-      @g06 x ↦ pkt ∉ destBuff
+      @g03 nb ↦ pkt ∈ recvBuff
+      @g04 nb ∈ Dests
+      @g05 nb ↦ pkt ∉ clrRecvBuffFlg
+      @g06 nb ↦ pkt ∉ destBuff
     then
-      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {x ↦ pkt}
-      @a02 destBuff ≔ destBuff ∪ {x ↦ pkt}
+      @a01 clrRecvBuffFlg ≔ clrRecvBuffFlg ∪ {nb ↦ pkt}
+      @a02 destBuff ≔ destBuff ∪ {nb ↦ pkt}
   end
 
   event finish_tx_pkt
@@ -149,7 +131,7 @@ EVENTS
       @g05 pkt ∉ ran(sentDown)
       @g06 x ∈ dom(sentUp)
       @g07 x ↦ pkt ∈ sentUp
-      @g08 pkt ∈ ran(ndBuff)
+      @g08 pkt ∈ ran(waitingBuff)
     then
       @a01 sentUp ≔ sentUp \ {x ↦ pkt}
   end
@@ -161,18 +143,18 @@ EVENTS
       @g02 {pkt} ◁ ctlNeighbours = ∅
       @g03 pkt ∈ ran(sentUp)
       @g04 pkt ∉ ran(sentDown)
-      @g05 pkt ∉ ran(ndBuff)
+      @g05 pkt ∉ ran(waitingBuff)
     then
       @a01 sentUp ≔ sentUp ⩥ {pkt}
   end
 
   event remove_destBuff
-    any x pkt
+    any nb pkt
     where
-      @g01 x ∈ ND
+      @g01 nb ∈ ND
       @g02 pkt ∈ PKT
-      @g03 x ∈ Dests
-      @g04 x ↦ pkt ∈ destBuff
+      @g03 nb ∈ Dests
+      @g04 nb ↦ pkt ∈ destBuff
     then
       @a01 destBuff ≔ destBuff \ {x ↦ pkt}
   end
@@ -189,6 +171,22 @@ EVENTS
     where
       @g01 pkt ∈ PKT
       @g02 pkt ∉ ran(destBuff)
+  end
+
+  event creatingPkt
+    any x des pkt data
+    where
+      @g01 x ∈ ND \ Dests
+      @g02 pkt ∈ PKT
+      @g03 data ∈ ℤ
+      @g04 x = initialSrc(pkt)
+      @g05 des = ran({pkt} ◁ finalDest)
+      @g06 pkt ∉ dom(pktFwdr)
+      @g07 pkt ∉ dom(pktData)
+    then
+      @a01 createdPkts ≔ createdPkts ∪ {pkt}
+      @a02 pktFwdr ≔ pktFwdr ∪ {pkt ↦ x}
+      @a03 pktData ≔ pktData ∪ {pkt ↦ data}
   end
 
   event clear_recvdBuff

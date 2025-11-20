@@ -1,6 +1,7 @@
 app/PatternModel$Invariant.class
 app/PatternComposer.class
 app/PatternModel$Variable.class
+app/PatternNames.class
 app/Main.class
 app/EventBWriter.class
 app/PatternCombinationEngine$EventKey.class

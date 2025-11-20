@@ -9,17 +9,17 @@
     <Constants>
       <Constant name="ND"/>
       <Constant name="Dests"/>
-      <Constant name="initialSrcAddr"/>
-      <Constant name="finalDestAddr"/>
+      <Constant name="initialSrc"/>
+      <Constant name="finalDest"/>
     </Constants>
 
     <Axioms>
-      <Axiom expression="finalDestAddr ∈ ℙ(PKT × ℤ)"/>
+      <Axiom expression="finalDest ∈ ℙ(PKT × ℤ)"/>
       <Axiom expression="ND ⊆ ℕ"/>
       <Axiom expression="finite(ND)"/>
       <Axiom expression="Dests ⊆ ND"/>
       <Axiom expression="finite(PKT)"/>
-      <Axiom expression="initialSrcAddr ∈ PKT → ND"/>
+      <Axiom expression="initialSrc ∈ PKT → ND"/>
     </Axioms>
   </Context>
 
@@ -45,7 +45,7 @@
     </Initialisation>
 
     <Events>
-      <Event name="creating_Pkt">
+      <Event name="creatingPkt">
         <Parameters>
           <Param name="x" type="ND \ Dests"/>
           <Param name="des"/>
@@ -56,8 +56,8 @@
           <Guard expression="x ∈ ND \ Dests"/>
           <Guard expression="pkt ∈ PKT"/>
           <Guard expression="data ∈ ℤ"/>
-          <Guard expression="x = initialSrcAddr(pkt)"/>
-          <Guard expression="des = ran({pkt} ◁ finalDestAddr)"/>
+          <Guard expression="x = initialSrc(pkt)"/>
+          <Guard expression="des = ran({pkt} ◁ finalDest)"/>
           <Guard expression="pkt ∉ dom(pktFwdr)"/>
           <Guard expression="pkt ∉ dom(pktData)"/>
         </Guards>

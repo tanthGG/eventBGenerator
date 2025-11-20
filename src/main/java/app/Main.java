@@ -55,13 +55,15 @@ public class Main {
       }
     }
     Path projectRoot = Paths.get("").toAbsolutePath();
+    Path thesisFolder = projectRoot.resolve("ThesisFolder");
     if (startServer) {
       Path workspace = workspacePath != null ? workspacePath : projectRoot.resolve("generated");
       GenerationService generationService = new GenerationService(
         new PatternDomParser(),
         new EventBMapper(),
         new EventBWriter(),
-        new RodinProjectService(workspace)
+        new RodinProjectService(workspace),
+        thesisFolder
       );
       WebServer server = new WebServer(projectRoot, generationService);
       try {
@@ -80,7 +82,8 @@ public class Main {
       new PatternDomParser(),
       new EventBMapper(),
       new EventBWriter(),
-      new RodinProjectService(workspacePath)
+      new RodinProjectService(workspacePath),
+      thesisFolder
     );
     if (patternXmls.size() == 1) {
       generationService.generate(patternXmls.get(0), projectName, ReqSpec.empty());

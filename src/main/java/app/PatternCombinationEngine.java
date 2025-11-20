@@ -42,7 +42,7 @@ public final class PatternCombinationEngine {
           ref("PReceive", "fwdr_receive_pkts"),
           ref("PNDBuffer", "record_ndBuff")),
       rule(
-          "dest_receive_pkt",
+          "dest_recv_pkt",
           ref("PReceive", "dest_recv_pkts"),
           ref("PDestBuffer", "record_destBuff")),
       rule(
@@ -191,7 +191,7 @@ public final class PatternCombinationEngine {
   }
 
   private static EventRef ref(String pattern, String event) {
-    return new EventRef(pattern, event);
+    return new EventRef(PatternNames.instantiate(pattern), event);
   }
 
   private static String reconcileType(String current, String incoming) {

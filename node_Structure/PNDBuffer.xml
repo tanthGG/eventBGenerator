@@ -11,7 +11,7 @@
       <Constant name="ND"/>
       <Constant name="Dests"/>
       <Constant name="initialSrcAddr"/>
-      <Constant name="finalDestAddr"/>
+      <Constant name="finalDest"/>
     </Constants>
 
     <Axioms>
@@ -20,6 +20,7 @@
       <Axiom expression="Dests ⊆ ND"/>
       <Axiom expression="finite(PKT)"/>
       <Axiom expression="initialSrcAddr ∈ PKT → ND"/>
+      <Axiom expression="finalDest ∈ ℙ(PKT × ℤ)"/>
     </Axioms>
   </Context>
 
@@ -28,15 +29,15 @@
     <ContextRef name="Context_PwaitingBuffer"/>
 
     <Variables>
-      <Variable name="ndBuff" type="ND ↔ PKT"/>
+      <Variable name="waitingBuff" type="ND ↔ PKT"/>
     </Variables>
 
     <Invariants>
-      <Invariant expression="ndBuff ∈ ND ↔ PKT"/>
+      <Invariant expression="waitingBuff ∈ ND ↔ PKT"/>
     </Invariants>
 
     <Initialisation>
-      <Action var="ndBuff" value="∅"/>
+      <Action var="waitingBuff" value="∅"/>
     </Initialisation>
 
     <Events>
@@ -49,10 +50,10 @@
         <Guards>
           <Guard expression="x ∈ ND \ Dests"/>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="x ↦ pkt ∉ ndBuff"/>
+          <Guard expression="x ↦ pkt ∉ waitingBuff"/>
         </Guards>
         <Actions>
-          <Action var="ndBuff" value="ndBuff ∪ {x ↦ pkt}"/>
+          <Action var="waitingBuff" value="waitingBuff ∪ {x ↦ pkt}"/>
         </Actions>
       </Event>
 
@@ -64,10 +65,10 @@
         <Guards>
           <Guard expression="x ∈ ND"/>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="x ↦ pkt ∈ ndBuff"/>
+          <Guard expression="x ↦ pkt ∈ waitingBuff"/>
         </Guards>
         <Actions>
-          <Action var="ndBuff" value="ndBuff \ {x ↦ pkt}"/>
+          <Action var="waitingBuff" value="waitingBuff \ {x ↦ pkt}"/>
         </Actions>
       </Event>
 
@@ -77,7 +78,7 @@
         </Parameters>
         <Guards>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="pkt ∈ ran(ndBuff)"/>
+          <Guard expression="pkt ∈ ran(waitingBuff)"/>
         </Guards>
         <Actions>
           <Action var="skip" value=""/>
@@ -90,7 +91,7 @@
         </Parameters>
         <Guards>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="pkt ∉ ran(ndBuff)"/>
+          <Guard expression="pkt ∉ ran(waitingBuff)"/>
         </Guards>
         <Actions>
           <Action var="skip" value=""/>

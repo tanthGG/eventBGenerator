@@ -1,5 +1,9 @@
 package app;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -17,7 +21,7 @@ public class EventBMapper {
           "send_up",
           "receive",
           "fwdr_receive_pkt",
-          "dest_receive_pkt",
+          "dest_recv_pkt",
           "clear_recvdbuff",
           "finish_tx_pkt",
           "final_tx_pkt");
@@ -86,17 +90,19 @@ public class EventBMapper {
     sb.append("SEES ").append(ctxName).append("\n\n");
 
     // Variables
-    if (!m.variables.isEmpty()) {
+    List<PatternModel.Variable> orderedVars = orderVariables(m.variables);
+    if (!orderedVars.isEmpty()) {
       sb.append("VARIABLES\n");
-      for (var v : m.variables) sb.append("  ").append(v.name).append("\n");
+      for (var v : orderedVars) sb.append("  ").append(v.name).append("\n");
       sb.append("\n");
     }
 
     // Invariants
-    if (!m.invariants.isEmpty()) {
+    List<PatternModel.Invariant> orderedInvs = orderInvariants(m.invariants);
+    if (!orderedInvs.isEmpty()) {
       sb.append("INVARIANTS\n");
       int i = 0;
-      for (var inv : m.invariants)
+      for (var inv : orderedInvs)
         sb.append(String.format("  @inv%02d %s\n", ++i, inv.expression));
       sb.append("\n");
     }
@@ -228,5 +234,63 @@ public class EventBMapper {
       return "extends " + eventName;
     }
     return null;
+  }
+
+  private static final List<String> VARIABLE_ORDER =
+      List.of(
+          "pktFwdr",
+          "pktData",
+          "createdPkts",
+          "waitingBuff",
+          "sentDown",
+          "sentUp",
+          "destBuff",
+          "recvBuff",
+          "clrRecvBuffFlg");
+
+  private static final Map<String, Integer> VARIABLE_RANK;
+
+  static {
+    Map<String, Integer> ranks = new HashMap<>();
+    for (int i = 0; i < VARIABLE_ORDER.size(); i++) {
+      ranks.put(VARIABLE_ORDER.get(i), i);
+    }
+    VARIABLE_RANK = Map.copyOf(ranks);
+  }
+
+  private static List<PatternModel.Variable> orderVariables(List<PatternModel.Variable> variables) {
+    List<PatternModel.Variable> ordered = new ArrayList<>(variables);
+    ordered.sort(
+        Comparator.comparingInt((PatternModel.Variable v) -> rankVariable(v == null ? null : v.name))
+            .thenComparing(
+                (PatternModel.Variable v) -> v == null || v.name == null ? "" : v.name));
+    return ordered;
+  }
+
+  private static int rankVariable(String name) {
+    if (name == null) return Integer.MAX_VALUE;
+    Integer rank = VARIABLE_RANK.get(name.trim());
+    return rank != null ? rank : Integer.MAX_VALUE;
+  }
+
+  private static List<PatternModel.Invariant> orderInvariants(List<PatternModel.Invariant> invariants) {
+    List<PatternModel.Invariant> ordered = new ArrayList<>(invariants);
+    ordered.sort(
+        Comparator.comparingInt(
+                (PatternModel.Invariant inv) -> rankInvariant(inv == null ? null : inv.expression))
+            .thenComparing(
+                (PatternModel.Invariant inv) ->
+                    inv == null || inv.expression == null ? "" : inv.expression));
+    return ordered;
+  }
+
+  private static int rankInvariant(String expression) {
+    if (expression == null) return Integer.MAX_VALUE;
+    for (String var : VARIABLE_ORDER) {
+      if (expression.contains(var)) {
+        return rankVariable(var);
+      }
+    }
+    return Integer.MAX_VALUE;
   }
 }
