@@ -1,0 +1,12 @@
+context Context_ISend
+
+sets PKT
+
+constants ND
+
+axioms
+  theorem @typing_ND ND ∈ ℙ(ℤ)
+  @cM1_axm0_1 ND ⊆ ℕ
+  @cM1_axm0_2 finite(ND)
+  @cM1_axm0_6 finite(PKT)
+end

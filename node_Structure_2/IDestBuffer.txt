@@ -1,0 +1,26 @@
+machine IDestBuffer sees Context_IDestBuffer
+
+variables destBuff
+
+invariants
+  theorem @typing_destBuff destBuff ∈ ℙ(ℤ × PKT)
+  @pMl_MDestBuffer_inv_1 destBuff ∈ Dests ↦ PKT
+
+events
+  event INITIALISATION
+    then
+      @MDestBuffer_int_1 destBuff = ∅
+    end
+
+  event dest_recv_pkt
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g3 nb ∈ Dests
+      @MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ destBuff
+    then
+      @MDestBuffer_ndBuff_al destBuff = destBuff ∪ {nb ↦ pkt}
+    end
+end

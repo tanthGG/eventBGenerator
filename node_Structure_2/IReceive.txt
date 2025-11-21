@@ -1,0 +1,66 @@
+machine IReceive sees Context_IReceive
+
+variables recvBuff clrRecvBuffFlg
+
+invariants
+  theorem @typing_clrRecvBuffFlg clrRecvBuffFlg ∈ ℙ(ℤ × PKT)
+  theorem @typing_recvBuff recvBuff ∈ ℙ(ℤ × PKT)
+  @pMl_MReceive_inv_1 recvBuff ∈ ND ↔ PKT
+  @pMl_MReceive_inv_2 clrRecvBuffFlg ∈ ND ↔ PKT
+
+events
+  event INITIALISATION
+    then
+      @MReceive_int_1 recvBuff = ∅
+      @MReceive_int_2 clrRecvBuffFlg = ∅
+    end
+
+  event receive
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_receive_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_receive_g2 nb ↦ pkt ∉ recvBuff
+    then
+      @MReceive_receive_a1 recvBuff = recvBuff ∪ {nb ↦ pkt}
+    end
+
+  event clear_recvdBuff
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_clear_recvdBuff_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_clear_recvdBuff_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_clear_recvdBuff_g3 nb ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @MReceive_clear_recvdBuff_a1 recvBuff = recvBuff \ {nb ↦ pkt}
+    end
+
+  event fwdr_receive_pkt
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_fwdr_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MReceive_fwdr_receive_pkt_g4 nb ∈ Dests
+    then
+      @MReceive_fwdr_receive_pkt_a1 clrRecvBuffFlg = clrRecvBuffFlg ∪ {nb ↦ pkt}
+    end
+
+  event dest_recv_pkt
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_dest_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ clrRecvBuffFlg
+    then
+      @MDestBuffer_record_destBuff_a1 clrRecvBuffFlg = clrRecvBuffFlg ∪ {nb ↦ pkt}
+    end
+end

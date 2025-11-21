@@ -1,0 +1,46 @@
+machine ISensingUnit sees Context_ISensingUnit
+
+variables ctlSensedFlg senseBuff
+
+invariants
+  theorem @typing_ctlSensedFlg ctlSensedFlg ∈ ℙ(ℤ × BOOL)
+  theorem @typing_senseBuff senseBuff ∈ ℙ(ℤ × ℙ(ℤ))
+  @pM3_MSensingUnit_sensing_inv_1 ctlSensedFlg ∈ ND \ Dests ↦ BOOL
+  @pM3_MSensingUnit_sensing_inv_2 senseBuff ∈ ND \ Dests ↦ P(ℤ)
+
+events
+  event INITIALISATION
+    then
+      @MSensingUnit_sensing_int_1 ctlSensedFlg = (ND \ Dests) × {FALSE}
+      @MSensingUnit_sensing_int_2 senseBuff = (ND \ Dests) × {∅}
+    end
+
+  event sensing
+    any x sf data
+    where
+      theorem @typing_sf sf ∈ BOOL
+      theorem @typing_x x ∈ ℤ
+      @MSensingUnit_sensing_g1 x ∈ ND \ Dests
+      @MSensingUnit_sensing_g2 sf ∈ BOOL
+      @MSensingUnit_sensing_g3 data ∈ ℤ
+      @MSensingUnit_sensing_g4 x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE
+    then
+      @MSensingUnit_sensing_a1 ctlSensedFlg(x) = sf
+      @MSensingUnit_sensing_a2 senseBuff(x) = senseBuff(x) ∪ {data}
+    end
+
+  event creatingDataPacket
+    any x des pkt data
+    where
+      theorem @typing_des des ∈ P(ℤ)
+      theorem @typing_data data ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @User_defined_guard_g1 type(pkt) = DATA
+      @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)
+    then
+      @MSensingUnit_removeSenseBuff_a1 senseBuff(x) = senseBuff(x) \ {data}
+    end
+end

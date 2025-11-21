@@ -1,0 +1,21 @@
+context Context_ISensingUnit
+
+sets PKT TYPE
+
+constants ND Dests initialSrcAddr finalDestAddr type DATA
+
+axioms
+  theorem @typing_ND ND ∈ ℙ(ℤ)
+  theorem @typing_Dests Dests ∈ ℙ(ℤ)
+  theorem @typing_initialSrcAddr initialSrcAddr ∈ ℙ(PKT × ℤ)
+  theorem @typing_finalDestAddr finalDestAddr ∈ ℙ(PKT × ℤ)
+  theorem @typing_type type ∈ ℙ(PKT × TYPE)
+  theorem @typing_DATA DATA ∈ TYPE
+  @cM1_axm0_1 ND ⊆ ℕ
+  @cM1_axm0_2 finite(ND)
+  @cM1_axm0_3 Dests ⊆ ND
+  @cM1_axm0_6 finite(PKT)
+  @cM1_axm0_7 initialSrcAddr ∈ PKT ↦ ND
+  @cM2_axm2_1 DATA ∈ TYPE
+  @cM2_axm2_4 type ∈ PKT ↦ TYPE
+end

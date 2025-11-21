@@ -1,0 +1,48 @@
+machine IPacket sees Context_IPacket
+
+variables pktFwdr pktData createdPkts
+
+invariants
+  theorem @typing_pktFwdr pktFwdr ∈ ℙ(PKT × ℤ)
+  theorem @typing_createdPkts createdPkts ∈ ℙ(PKT)
+  theorem @typing_pktData pktData ∈ ℙ(PKT × ℤ)
+  @pMl_MPacket_inv_1 pktFwdr ∈ PKT ⇸ ND
+  @pMl_MPacket_inv_2 pktData ∈ PKT ⇸ ℤ
+  @pMl_MPacket_inv_3 createdPkts ⊆ PKT
+
+events
+  event INITIALISATION
+    then
+      @MPacket_int_1 pktFwdr = ∅
+      @MPacket_int_2 pktData = ∅
+      @MPacket_int_3 createdPkts = ∅
+    end
+
+  event creatingPkt
+    any x des pkt data
+    where
+      theorem @typing_des des ∈ ℙ(ℤ)
+      theorem @typing_data data ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)
+      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData)
+    then
+      @MPacket_creating_pkt_a1 createdPkts = createdPkts ∪ {pkt}
+      @MPacket_creating_pkt_a2 pktFwdr = pktFwdr ∪ {pkt ↦ x}
+      @MPacket_creating_pkt_a3 pktData = pktData ∪ {pkt ↦ data}
+    end
+
+  event start_tx
+    any x pkt
+    where
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MPacket_set_pktFwdr_g1 pkt ∈ dom(pktFwdr)
+    then
+      @MPacket_set_pktFwdr_a2 pktFwdr = pktFwdr <+ {pkt ↦ x}
+    end
+end
