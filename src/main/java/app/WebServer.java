@@ -13,8 +13,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -121,8 +123,8 @@ public class WebServer {
     int refinementIndex = 0;
     boolean includeSensingTemplate = false;
     boolean includeActivateContent = false;
-
     boolean hasSeenSensing = false;
+    Set<Path> previousPatterns = null;
 
     for (List<String> fileNames : refinements) {
       if (fileNames == null || fileNames.isEmpty()) {
@@ -156,6 +158,21 @@ public class WebServer {
         patternPaths.removeIf(WebServer::isActivatePath);
       }
 
+      if (patternPaths.isEmpty()) {
+        continue;
+      }
+
+      LinkedHashSet<Path> uniquePatterns = new LinkedHashSet<>(patternPaths);
+      if (uniquePatterns.isEmpty()) {
+        continue;
+      }
+
+      if (previousPatterns != null && previousPatterns.equals(uniquePatterns)) {
+        continue;
+      }
+
+      patternPaths = new ArrayList<>(uniquePatterns);
+
       EventBIR ir;
       try {
         ir = generationService.compose(patternPaths, refinementIndex);
@@ -175,6 +192,7 @@ public class WebServer {
       Path ctxPath = machineDir.resolve(ir.ctxName() + ".ctx");
       Path machPath = machineDir.resolve(ir.machName() + ".bcm");
       generatedIrs.add(ir);
+      previousPatterns = uniquePatterns;
 
       refinementIndex++;
       if (refinementHasSensing) {
@@ -186,7 +204,7 @@ public class WebServer {
       EventBIR reference = generatedIrs.get(generatedIrs.size() - 1);
       var templateIr =
           generationService.buildAdditionalMachineFromTemplate(
-              "M3GGD.txt", reference, includeActivateContent, refinements.size() + 1);
+              "M3GGD.txt", reference, includeActivateContent, refinementIndex);
       if (templateIr.isEmpty()) {
         send(exchange, 500, "Sensing unit template unavailable.", "text/plain");
         return;

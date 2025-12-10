@@ -1,4 +1,4 @@
-machine pM1 sees Context
+machine M1 sees Context
 
 variables
   pktFwdr      

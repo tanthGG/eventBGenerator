@@ -19,7 +19,7 @@
       <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
       <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
       <Axiom expression="@cM1_axm0_7 initialSrcAddr ∈ PKT → ND"/>
-      <Axiom expression="@cM1_axm0_10 finalDestAddr ∈ PKT → ND {BROADCAST}"/>
+      <Axiom expression="@cM1_axm0_10 finalDestAddr ∈ PKT → ND ∪ {BROADCAST}"/>
     </Axioms>
   </Context>
 

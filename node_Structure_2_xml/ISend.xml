@@ -76,7 +76,7 @@
           <Guard expression="@MSend_sent_up_g2 x ↦ pkt ∉ sentUp"/>
           <Guard expression="@MSend_sent_up_g3 x ↦ pkt ∈ sentDown"/>
           <Guard expression="@MSend_sent_up_g4 pkt ∉ dom(ctlNeighbours)"/>
-          <Guard expression="@MSend_sent_up_g5 nbrs ∈ {n| n ∈ P(ND)} ∧ nbrs ≠ ∅"/>
+          <Guard expression="@MSend_sent_up_g5 nbrs ∈ {n| n ∈ ℙ(ND)} ∧ nbrs ≠ ∅"/>
         </Guards>
         <Actions>
           <Action expression="@MSend_sent_up_a1 ctlNeighbours := ctlNeighbours ∪ ({pkt} × nbrs)"/>

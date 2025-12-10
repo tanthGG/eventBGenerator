@@ -1,4 +1,4 @@
-machine uM2 refines pM1 sees Context
+machine uM2 refines M1 sees Context
 
 variables
   pktFwdr      

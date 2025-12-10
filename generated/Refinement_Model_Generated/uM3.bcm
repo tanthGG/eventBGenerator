@@ -1,53 +1,53 @@
-machine uM3 refines M2 sees Context
+machine uM3 refines uM2 sees Context
 
 variables
-  pktFwdr      
-  pktData      
-  createdPkts  
-  ndBuff       
-  sentDown     
-  sentUp       
-  ctlNeighbours  
-  destBuff       
+  pktFwdr
+  pktData
+  createdPkts
+  ndBuff
+  sentDown
+  sentUp
+  ctlNeighbours
+  destBuff
   recvBuff
   clrRecvBuffFlg
+  ctlSensedFlg
+  senseBuff
+  emergencyAlert
+
+invariants
+  @MSensingUnit_sensing_inv_1 ctlSensedFlg ∈ ND \ Dests → BOOL
+  @MSensingUnit_sensing_inv_2 senseBuff ∈ ND \ Dests → ℙ(ℤ)
+  @PActivate_inv_1 emergencyAlert ∈ BOOL
 
 events
   event INITIALISATION extends INITIALISATION
+    then
+      @MSensingUnit_sensing_int_1 ctlSensedFlg := (ND \ Dests) × {FALSE}
+      @MSensingUnit_sensing_int_2 senseBuff := (ND \ Dests) × {∅}
+    end
+
+  event sensing
+    any x sf data
+    where
+      @MSensingUnit_sensing_g1 x ∈ ND \ Dests
+      @MSensingUnit_sensing_g2 sf ∈ BOOL
+      @MSensingUnit_sensing_g3 data ∈ ℤ
+      @MSensingUnit_sensing_g4 x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE
+    then
+      @MSensingUnit_sensing_a1 ctlSensedFlg(x) := sf
+      @MSensingUnit_sensing_a2 senseBuff(x) := senseBuff(x) ∪ {data}
+    end
+
+  event creatingDataPacket extends creatingDataPacket
+    where
+      @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)
+    then
+      @MSensingUnit_removeSenseBuff_a1 senseBuff(x) := senseBuff(x) \ {data}
+    end
+
+  event creatingControlPacket extends creatingControlPacket
   end
-
-  event creatingDataPacket refines creatingPkt
-    any x des pkt data
-    where
-      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ 
-      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
-      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr) 
-      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData) 
-      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
-      @User_defined_guard_g1 type(pkt) = DATA
-    then
-      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
-      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
-      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
-      @MNDBuffMgt_record_ndBuff_al ndBuff := ndBuff ∪ {x ↦ pkt}
-    end
-
-  event creatingControlPacket refines creatingPkt
-    any x des pkt data
-    where
-      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
-      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
-      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)
-      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData)
-      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
-      @User_defined_guard_g1 data = CTL_VAL
-      @User_defined_guard_g2 type(pkt) ∈ CONTROL
-    then
-      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
-      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
-      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
-      @MNDBuffMgt_record_ndBuff_al ndBuff := ndBuff ∪ {x ↦ pkt}
-    end
 
   event start_tx extends start_tx
   end
@@ -75,4 +75,31 @@ events
 
   event final_tx_pkt extends final_tx_pkt
   end
+  event actuating
+    any data
+    where
+      @PActivate_actuating_g1 data ∈ ℤ
+      @PActivate_actuating_g2 data ≥ safetyThreshold
+      @PActivate_actuating_g3 emergencyAlert = FALSE
+    then
+      @PActivate_actuating_a1 emergencyAlert := TRUE
+    end
+
+  event no_actuating
+    any data
+    where
+      @PActivate_no_actuating_g1 data ∈ ℤ
+      @PActivate_no_actuating_g2 data < safetyThreshold
+  end
+
+  event reset_actuatingStatus
+    any data
+    where
+      @PActivate_reset_actuating_g1 data ≥ safetyThreshold
+      @PActivate_reset_actuating_g2 emergencyAlert = TRUE
+    then
+      @PActivate_reset_actuating_a1 emergencyAlert := FALSE
+    end
+
+
 end

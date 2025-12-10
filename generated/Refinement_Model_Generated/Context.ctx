@@ -6,8 +6,8 @@ sets
 constants
   safetyThreshold
   BROADCAST
-  ND
   Dests
+  ND
   initialSrcAddr
   finalDestAddr
   type
@@ -22,7 +22,7 @@ axioms
   @cM1_axm0_3 Dests ⊆ ND
   @cM1_axm0_6 finite(PKT)
   @cM1_axm0_7 initialSrcAddr ∈ PKT → ND
-  @cM1_axm0_10 finalDestAddr ∈ PKT → ND {BROADCAST}
+  @cM1_axm0_10 finalDestAddr ∈ PKT → ND ∪ {BROADCAST}
   @cM2_axm2_1 DATA ∈ TYPE
   @cM2_axm2_2 CONTROL ⊆ TYPE
   @cM2_axm2_3 partition(TYPE, CONTROL, {DATA})
