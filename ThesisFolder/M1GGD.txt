@@ -1,0 +1,163 @@
+machine pM1 sees Context
+
+variables
+  pktFwdr      
+  pktData      
+  createdPkts  
+  ndBuff       
+  sentDown     
+  sentUp       
+  ctlNeighbours  
+  destBuff       
+  recvBuff
+  clrRecvBuffFlg
+
+invariants
+  @MPacket_inv_1 pktFwdr ∈ PKT ⇸ ND
+  @MPacket_inv_2 pktData ∈ PKT ⇸ ℤ
+  @MPacket_inv_3 createdPkts ⊆ PKT
+  @MNDBuffer_inv_1 ndBuff ∈ ND ↔ PKT
+  @MSend_inv_1 sentUp ∈ ND ↔ PKT
+  @MSend_inv_2 sentDown ∈ ND ↔ PKT
+  @MSend_inv_3 ctlNeighbours ∈ PKT ↔ ND
+  @MDestBuffer_inv_1 destBuff ∈ Dests ↔ PKT
+  @MReceive_inv_1 recvBuff ∈ ND ↔ PKT
+  @MReceive_inv_2 clrRecvBuffFlg ∈ ND ↔ PKT
+
+events
+  event INITIALISATION
+    then
+      @MPacket_int_1 pktFwdr := ∅
+      @MPacket_int_2 pktData := ∅
+      @MPacket_int_3 createdPkts := ∅
+      @MNDBuffer_int_1 ndBuff := ∅
+      @MSend_int_1 sentUp := ∅
+      @MSend_int_2 sentDown := ∅
+      @MSend_int_3 ctlNeighbours := ∅
+      @MDestBuffer_int_1 destBuff := ∅
+      @MReceive_int_1 recvBuff := ∅
+      @MReceive_int_2 clrRecvBuffFlg := ∅
+    end
+
+  event creatingPkt
+    any x des pkt data
+    where
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)
+      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData)
+      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
+    then
+      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
+      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
+      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
+      @MNDBuffMgt_record_ndBuff_al ndBuff := ndBuff ∪ {x ↦ pkt}
+    end
+
+  event start_tx
+    any x pkt
+    where
+      @MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MSend_start_tx_g2 x ↦ pkt ∉ sentDown  
+      @MSend_start_tx_g3 x ↦ pkt ∉ sentUp    
+      @MPacket_set_pktFwdr_g1 pkt ∈ dom(pktFwdr)
+      @MNDBuffer_remove_ndBuff_g1 x ↦ pkt ∈ ndBuff
+    then
+      @MISend_start_tx_a1 sentDown := sentDown ∪ {x ↦ pkt}
+      @MPacket_set_pktFwdr_a2 pktFwdr := pktFwdr <+ {pkt ↦ x}
+      @MNDBuffer_remove_ndBuff_al ndBuff := ndBuff \ {x ↦ pkt}
+    end
+
+  event send_down
+    any x pkt
+    where
+      @MSend_send_down_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MSend_send_down_g2 x ↦ pkt ∈ sentDown
+    end
+
+  event send_up  
+    any x pkt nbrs
+    where
+      @MSend_sent_up_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MSend_sent_up_g2 x ↦ pkt ∉ sentUp  
+      @MSend_sent_up_g3 x ↦ pkt ∈ sentDown
+      @MSend_sent_up_g4 pkt ∉ dom(ctlNeighbours)
+      @MSend_sent_up_g5 nbrs ∈ {n | n ∈ ℙ(ND)} ∧ nbrs ≠ ∅
+    then
+      @MSend_sent_up_a1 ctlNeighbours := ctlNeighbours ∪ ({pkt} × nbrs)
+      @MSend_sent_up_a2 sentDown := sentDown \ {x ↦ pkt}
+      @MSend_sent_up_a3 sentUp := sentUp ∪ {x ↦ pkt}
+    end
+
+  event receive
+    any nb pkt
+    where
+      @MReceive_receive_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_receive_g2 nb ↦ pkt ∉ recvBuff
+      @MSend_remove_ctlNeighbour_g1 nb ↦ pkt ∉ sentUp
+      @MSend_remove_ctlNeighbour_g2 nb ↦ pkt ∉ sentDown
+    then
+      @MReceive_receive_a1 recvBuff := recvBuff ∪ {nb ↦ pkt}
+      @MSend_remove_ctlNeighbour_a1 ctlNeighbours := ctlNeighbours \ {pkt ↦ nb}
+    end
+
+  event clear_recvdBuff
+    any nb pkt
+    where
+      @MReceive_clear_recvdBuff_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_clear_recvdBuff_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_clear_recvdBuff_g3 nb ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @MReceive_clear_recvdBuff_a1 recvBuff := recvBuff \ {nb ↦ pkt}
+    end
+
+  event fwdr_receive_pkt
+    any nb pkt
+    where
+      @MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_fwdr_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MReceive_fwdr_receive_pkt_g4 nb ∉ Dests
+      @MNDBuffer_record_ndBuff_g1 nb ↦ pkt ∉ ndBuff
+    then
+      @MReceive_fwdr_receive_pkt_a1 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}
+      @MNDBuffer_record_ndBuff_al ndBuff := ndBuff ∪ {nb ↦ pkt}
+    end
+
+  event dest_recv_pkt
+    any nb pkt
+    where
+      @MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g2 nb ↦ pkt ∈ recvBuff   
+      @MReceive_dest_receive_pkt_g3 nb ∈ Dests
+      @MReceive_dest_receive_pkt_g4 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ destBuff
+    then
+      @MDestBuffer_ndBuff_al destBuff := destBuff ∪ {nb ↦ pkt}
+      @MDestBuffer_record_destBuff_al clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}
+    end
+
+  event finish_tx_pkt
+    any x pkt
+    where
+      @MSend_finish_tx_pkt_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MSend_finish_tx_pkt_g2 {pkt} ◁ ctlNeighbours = ∅
+      @MSend_finish_tx_pkt_g3 pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)
+      @MSend_finish_tx_pkt_g4 x ∈ dom(sentUp)
+      @MSend_finish_tx_pkt_g5 x ↦ pkt ∈ sentUp
+      @MNDBuffer_is_In_Range_ndBuff_g1 pkt ∈ ran(ndBuff)
+    then
+      @MSend_finish_tx_pkt_a1 sentUp := sentUp \ {x ↦ pkt}
+    end
+
+  event final_tx_pkt
+    any pkt
+    where
+      @MSend_final_tx_pkt_g1 pkt ∈ PKT
+      @MSend_final_tx_pkt_g2 {pkt} ◁ ctlNeighbours = ∅
+      @MSend_final_tx_pkt_g3 pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)
+      @MNDBuffer_isNot_In_Range_ndBuff_g1 pkt ∉ ran(ndBuff)
+    then
+      @MSend_final_tx_pkt_a1 sentUp := sentUp ⩥ {pkt}
+    end
+end

@@ -24,29 +24,21 @@ public class EventBMapper {
           "dest_recv_pkt",
           "clear_recvdbuff",
           "finish_tx_pkt",
-          "final_tx_pkt");
+          "final_tx_pkt",
+          "creatingdatapacket",
+          "creatingcontrolpacket");
 
   public EventBIR toEventB(PatternModel m, int refinement) {
     String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
     int refIndex = Math.max(refinement, 0);
-    boolean includesPSensing = includesPattern(m, "PSensingUnit");
+    boolean includesPSensing = includesPattern(m, "PSensingUnit") || includesPattern(m, "MSensingUnit");
+    boolean allowExtends = includesPSensing;
     int level = refIndex + 1;
-    String ctxName;
-    String machName;
-    if (includesPSensing) {
-      ctxName = "cM" + level;
-      machName = level == 1 ? "pM1" : "uM" + level;
-    } else {
-      ctxName = baseName + "_C" + refIndex;
-      machName = baseName + "_M" + refIndex;
-    }
+    String ctxName = "Context";
+    String machName = includesPSensing ? "uM" + level : "M" + level;
     String parentMachine = null;
     if (refIndex > 0) {
-      if (includesPSensing) {
-        parentMachine = level == 2 ? "pM1" : "uM" + (level - 1);
-      } else {
-        parentMachine = baseName + "_M" + (refIndex - 1);
-      }
+      parentMachine = includesPSensing ? "M" + refIndex : "M" + refIndex;
     }
 
     StringBuilder ctxSb = new StringBuilder();
@@ -73,9 +65,8 @@ public class EventBMapper {
     // Axioms
     if (m.context != null && m.context.axioms != null && !m.context.axioms.isEmpty()) {
       ctxSb.append("axioms\n");
-      int ax = 0;
       for (String axiom : m.context.axioms) {
-        ctxSb.append(String.format("  @ax%02d %s\n", ++ax, axiom));
+        ctxSb.append("  ").append(axiom).append("\n");
       }
       ctxSb.append("\n");
     }
@@ -101,9 +92,11 @@ public class EventBMapper {
     List<PatternModel.Invariant> orderedInvs = orderInvariants(m.invariants);
     if (!orderedInvs.isEmpty()) {
       sb.append("INVARIANTS\n");
-      int i = 0;
-      for (var inv : orderedInvs)
-        sb.append(String.format("  @inv%02d %s\n", ++i, inv.expression));
+      for (var inv : orderedInvs) {
+        if (inv.expression != null && !inv.expression.isBlank()) {
+          sb.append("  ").append(inv.expression.trim()).append("\n");
+        }
+      }
       sb.append("\n");
     }
 
@@ -120,31 +113,33 @@ public class EventBMapper {
 
     if (initEvent != null) {
       sb.append("  event INITIALISATION\n");
-      if (refIndex > 0) {
+      if (refIndex > 0 && allowExtends) {
         sb.append("    extends INITIALISATION\n");
       }
       sb.append("    then\n");
-      int a = 0;
-      for (var ac : initEvent.actions)
-        sb.append(String.format("      @int%02d %s\n", ++a, ac.assignment));
-      if (a == 0) sb.append("      @int01 skip\n");
+      int actionCount = 0;
+      for (var ac : initEvent.actions) {
+        if (ac.assignment != null && !ac.assignment.isBlank()) {
+          sb.append("      ").append(ac.assignment).append("\n");
+          actionCount++;
+        }
+      }
+      if (actionCount == 0) sb.append("      skip\n");
       sb.append("  end\n\n");
     } else {
       sb.append("  event INITIALISATION\n");
       if (refIndex > 0) {
         sb.append("    extends INITIALISATION\n");
       }
-      sb.append("    then\n      @int01 skip\n  end\n\n");
+      sb.append("    then\n      skip\n  end\n\n");
     }
 
     for (var e : m.events) {
       if (initEvent != null && e == initEvent) continue;
       sb.append("  event ").append(e.name).append("\n");
-      if (refIndex > 0) {
-        String clause = refinementClauseForEvent(e.name);
-        if (clause != null) {
-          sb.append("    ").append(clause).append("\n");
-        }
+      String clause = refinementClauseForEvent(e.name);
+      if (refIndex > 0 && allowExtends && clause != null) {
+        sb.append("    ").append(clause).append("\n");
       }
       if (!e.params.isEmpty()) {
         sb.append("    any ");
@@ -155,15 +150,16 @@ public class EventBMapper {
         sb.append("\n");
       }
 
-      int g = 0;
       StringBuilder guardSb = new StringBuilder();
       for (var p : e.params) {
         if (p.type != null && !p.type.isBlank() && !hasExplicitTypeGuard(e.guards, p.name, p.type)) {
-          guardSb.append(String.format("      @g%02d %s ∈ %s\n", ++g, p.name, p.type));
+          guardSb.append("      ").append(p.name).append(" ∈ ").append(p.type).append("\n");
         }
       }
       for (var gu : e.guards) {
-        guardSb.append(String.format("      @g%02d %s\n", ++g, gu.expr));
+        if (gu.expr != null && !gu.expr.isBlank()) {
+          guardSb.append("      ").append(gu.expr).append("\n");
+        }
       }
 
       if (guardSb.length() > 0) {
@@ -177,9 +173,11 @@ public class EventBMapper {
       }
 
       sb.append("    then\n");
-      int a = 0;
-      for (var ac : e.actions)
-        sb.append(String.format("      @a%02d %s\n", ++a, ac.assignment));
+      for (var ac : e.actions) {
+        if (ac.assignment != null && !ac.assignment.isBlank()) {
+          sb.append("      ").append(ac.assignment).append("\n");
+        }
+      }
       sb.append("  end\n\n");
     }
 

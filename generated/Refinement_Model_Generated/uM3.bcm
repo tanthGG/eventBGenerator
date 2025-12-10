@@ -1,0 +1,78 @@
+machine uM3 refines M2 sees Context
+
+variables
+  pktFwdr      
+  pktData      
+  createdPkts  
+  ndBuff       
+  sentDown     
+  sentUp       
+  ctlNeighbours  
+  destBuff       
+  recvBuff
+  clrRecvBuffFlg
+
+events
+  event INITIALISATION extends INITIALISATION
+  end
+
+  event creatingDataPacket refines creatingPkt
+    any x des pkt data
+    where
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ 
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr) 
+      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData) 
+      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
+      @User_defined_guard_g1 type(pkt) = DATA
+    then
+      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
+      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
+      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
+      @MNDBuffMgt_record_ndBuff_al ndBuff := ndBuff ∪ {x ↦ pkt}
+    end
+
+  event creatingControlPacket refines creatingPkt
+    any x des pkt data
+    where
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)
+      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData)
+      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
+      @User_defined_guard_g1 data = CTL_VAL
+      @User_defined_guard_g2 type(pkt) ∈ CONTROL
+    then
+      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
+      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
+      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
+      @MNDBuffMgt_record_ndBuff_al ndBuff := ndBuff ∪ {x ↦ pkt}
+    end
+
+  event start_tx extends start_tx
+  end
+
+  event send_down extends send_down
+  end
+
+  event send_up extends send_up
+  end
+
+  event receive extends receive
+  end
+
+  event clear_recvdBuff extends clear_recvdBuff
+  end
+
+  event fwdr_receive_pkt extends fwdr_receive_pkt
+  end
+
+  event dest_recv_pkt extends dest_recv_pkt
+  end
+
+  event finish_tx_pkt extends finish_tx_pkt
+  end
+
+  event final_tx_pkt extends final_tx_pkt
+  end
+end

@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -31,12 +32,31 @@ public class WebServer {
 
   private final GenerationService generationService;
   private final Path projectRoot;
+  private static final String PRIMARY_PATTERN_DIR = "node_Structure_2_xml";
+  private static final String LEGACY_PATTERN_DIR = "node_Structure";
+
   private final Path nodeStructureDir;
 
   public WebServer(Path projectRoot, GenerationService generationService) {
     this.projectRoot = projectRoot;
     this.generationService = generationService;
-    this.nodeStructureDir = projectRoot.resolve("node_Structure");
+    this.nodeStructureDir = resolvePatternDirectory(projectRoot);
+  }
+
+  private static Path resolvePatternDirectory(Path projectRoot) {
+    Path primary = projectRoot.resolve(PRIMARY_PATTERN_DIR);
+    if (Files.isDirectory(primary)) {
+      System.out.println("Using pattern directory: " + PRIMARY_PATTERN_DIR);
+      return primary;
+    }
+    Path legacy = projectRoot.resolve(LEGACY_PATTERN_DIR);
+    if (Files.isDirectory(legacy)) {
+      System.out.println(
+          "Primary pattern directory not found, falling back to: " + LEGACY_PATTERN_DIR);
+      return legacy;
+    }
+    // Default to primary path so newly created directories are picked up automatically.
+    return primary;
   }
 
   public void start(int port) throws IOException {
@@ -99,12 +119,19 @@ public class WebServer {
 
     List<EventBIR> generatedIrs = new ArrayList<>();
     int refinementIndex = 0;
+    boolean includeSensingTemplate = false;
+    boolean includeActivateContent = false;
+
+    boolean hasSeenSensing = false;
 
     for (List<String> fileNames : refinements) {
       if (fileNames == null || fileNames.isEmpty()) {
         send(exchange, 400, "Each refinement must include at least one pattern", "text/plain");
         return;
       }
+
+      boolean refinementHasSensing = fileNames.stream().anyMatch(WebServer::isSensingUnitPattern);
+      boolean isolateActivate = refinementHasSensing || hasSeenSensing;
 
       List<Path> patternPaths = new ArrayList<>();
       for (String fileName : fileNames) {
@@ -113,7 +140,20 @@ public class WebServer {
           send(exchange, 404, "Pattern not found: " + fileName, "text/plain");
           return;
         }
+        if (isSensingUnitPattern(fileName)) {
+          includeSensingTemplate = true;
+        }
+        if (isActivatePattern(fileName)) {
+          includeActivateContent = true;
+          if (isolateActivate) {
+            continue;
+          }
+        }
         patternPaths.add(path);
+      }
+
+      if (isolateActivate) {
+        patternPaths.removeIf(WebServer::isActivatePath);
       }
 
       EventBIR ir;
@@ -137,6 +177,28 @@ public class WebServer {
       generatedIrs.add(ir);
 
       refinementIndex++;
+      if (refinementHasSensing) {
+        hasSeenSensing = true;
+      }
+    }
+
+    if (includeSensingTemplate && !generatedIrs.isEmpty()) {
+      EventBIR reference = generatedIrs.get(generatedIrs.size() - 1);
+      var templateIr =
+          generationService.buildAdditionalMachineFromTemplate(
+              "M3GGD.txt", reference, includeActivateContent, refinements.size() + 1);
+      if (templateIr.isEmpty()) {
+        send(exchange, 500, "Sensing unit template unavailable.", "text/plain");
+        return;
+      }
+      EventBIR extraIr = templateIr.get();
+      try {
+        generationService.writeToProject(projectName, extraIr);
+      } catch (IOException e) {
+        send(exchange, 500, "Failed to write sensing unit machine: " + e.getMessage(), "text/plain");
+        return;
+      }
+      generatedIrs.add(extraIr);
     }
 
     if (generatedIrs.isEmpty()) {
@@ -229,7 +291,7 @@ public class WebServer {
 
       for (int i = 0; i < irs.size(); i++) {
         EventBIR ir = irs.get(i);
-        String entryName = root + "M" + (i + 1) + ".bcm";
+        String entryName = root + ir.machName() + ".bcm";
         entries.add(entryName);
         zip.putNextEntry(new ZipEntry(entryName));
         zip.write(ir.machineText().getBytes(StandardCharsets.UTF_8));
@@ -307,6 +369,23 @@ public class WebServer {
       }
     }
     return -1;
+  }
+
+  private static boolean isSensingUnitPattern(String fileName) {
+    if (fileName == null) return false;
+    String normalized = fileName.trim().toLowerCase(Locale.ROOT);
+    return normalized.endsWith("isensingunit.xml") || normalized.endsWith("psensingunit.xml");
+  }
+
+  private static boolean isActivatePattern(String fileName) {
+    if (fileName == null) return false;
+    String normalized = fileName.trim().toLowerCase(Locale.ROOT);
+    return normalized.endsWith("iactivate.xml") || normalized.endsWith("pactivate.xml");
+  }
+
+  private static boolean isActivatePath(Path path) {
+    if (path == null || path.getFileName() == null) return false;
+    return isActivatePattern(path.getFileName().toString());
   }
 
   private void send(HttpExchange exchange, int status, String body, String contentType) throws IOException {

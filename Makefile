@@ -1,5 +1,5 @@
 JAR := target/eventb-generator-0.1.0-shaded.jar
-PATTERN_DIR := node_Structure
+PATTERN_DIR := node_Structure_2_xml
 OUT_DIR := generated
 PATTERN_FILES := $(wildcard $(PATTERN_DIR)/*.xml)
 PROJECTS := $(patsubst $(PATTERN_DIR)/%.xml,%Proj,$(PATTERN_FILES))

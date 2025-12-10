@@ -2,7 +2,7 @@ context Context_ISensingUnit
 
 sets PKT TYPE
 
-constants ND Dests initialSrcAddr finalDestAddr type DATA
+constants ND Dests initialSrcAddr finalDestAddr type DATA CONTROL CTL_VAL
 
 axioms
   theorem @typing_ND ND ∈ ℙ(ℤ)
@@ -11,11 +11,14 @@ axioms
   theorem @typing_finalDestAddr finalDestAddr ∈ ℙ(PKT × ℤ)
   theorem @typing_type type ∈ ℙ(PKT × TYPE)
   theorem @typing_DATA DATA ∈ TYPE
+  @cM2_axm2_2 CONTROL ⊆ TYPE
+  @cM2_axm2_3 partition(TYPE, CONTROL, {DATA})
+  @cM2_axm2_5 CTL_VAL = 0
   @cM1_axm0_1 ND ⊆ ℕ
   @cM1_axm0_2 finite(ND)
   @cM1_axm0_3 Dests ⊆ ND
   @cM1_axm0_6 finite(PKT)
-  @cM1_axm0_7 initialSrcAddr ∈ PKT ↦ ND
+  @cM1_axm0_7 initialSrcAddr ∈ PKT → ND
   @cM2_axm2_1 DATA ∈ TYPE
-  @cM2_axm2_4 type ∈ PKT ↦ TYPE
+  @cM2_axm2_4 type ∈ PKT → TYPE
 end

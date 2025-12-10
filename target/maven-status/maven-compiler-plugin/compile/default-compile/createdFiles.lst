@@ -17,6 +17,7 @@ app/RodinProjectService.class
 app/GenerationService.class
 app/PatternModel$Context.class
 app/EventBMapper.class
+app/GenerationService$LegacyTemplate.class
 app/PatternModel$Guard.class
 app/WebServer.class
 app/WebServer$GenerateRequest.class

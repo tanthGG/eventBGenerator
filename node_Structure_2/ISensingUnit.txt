@@ -29,6 +29,16 @@ events
       @MSensingUnit_sensing_a2 senseBuff(x) = senseBuff(x) ∪ {data}
     end
 
+  event remove_senseBuff
+    any x data
+    where
+      theorem @typing_x x ∈ ℤ
+      theorem @typing_data data ∈ ℤ
+      @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)
+    then
+      @MSensingUnit_removeSenseBuff_a1 senseBuff(x) = senseBuff(x) \ {data}
+    end
+
   event creatingDataPacket
     any x des pkt data
     where
@@ -36,11 +46,17 @@ events
       theorem @typing_data data ∈ ℤ
       theorem @typing_pkt pkt ∈ PKT
       theorem @typing_x x ∈ ℤ
-      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
-      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
       @User_defined_guard_g1 type(pkt) = DATA
-      @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)
-    then
-      @MSensingUnit_removeSenseBuff_a1 senseBuff(x) = senseBuff(x) \ {data}
+    end
+
+  event creatingControlPacket
+    any x des pkt data
+    where
+      theorem @typing_des des ∈ P(ℤ)
+      theorem @typing_data data ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @User_defined_guard_g1 data = CTL_VAL
+      @User_defined_guard_g2 type(pkt) ∈ CONTROL
     end
 end

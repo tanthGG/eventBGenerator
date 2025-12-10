@@ -74,7 +74,7 @@ function renderRefinementGroups() {
   if (!availablePatterns.length) {
     const empty = document.createElement('p');
     empty.className = 'empty-state';
-    empty.textContent = 'No pattern XML files found in the node_Structure folder.';
+    empty.textContent = 'No pattern XML files found in the node_Structure_2_xml folder.';
     refinementGroupsEl.appendChild(empty);
     return;
   }

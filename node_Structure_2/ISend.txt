@@ -49,7 +49,7 @@ events
       @MSend_sent_up_g2 x ↦ pkt ∉ sentUp
       @MSend_sent_up_g3 x ↦ pkt ∈ sentDown
       @MSend_sent_up_g4 pkt ∉ dom(ctlNeighbours)
-      @MSend_sent_up_g5 nbrs ∈ {n| n ∈ P(ND)} ∧ nbrs ≠ ∅
+      @MSend_sent_up_g5 nbrs ∈ {n| n ∈ ℙ(ND)} ∧ nbrs ≠ ∅
     then
       @MSend_sent_up_a1 ctlNeighbours = ctlNeighbours ∪ ({pkt} × nbrs)
       @MSend_sent_up_a2 sentDown = sentDown \ {x ↦ pkt}

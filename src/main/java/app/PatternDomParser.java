@@ -335,6 +335,7 @@ public class PatternDomParser {
       String multiVars = attr(aEl, "vars");
       String multiValues = attr(aEl, "values");
       String text = textOr(aEl, "");
+      String expressionAttr = attr(aEl, "expression");
 
       String assignment = null;
 
@@ -361,6 +362,10 @@ public class PatternDomParser {
         if (rhs != null && !rhs.isBlank()) {
           assignment = rhs;
         }
+      }
+
+      if ((assignment == null || assignment.isBlank()) && expressionAttr != null && !expressionAttr.isBlank()) {
+        assignment = expressionAttr.trim();
       }
 
       if (assignment == null || assignment.trim().equalsIgnoreCase("skip")) continue;

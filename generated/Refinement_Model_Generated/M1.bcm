@@ -1,0 +1,105 @@
+MACHINE M1
+SEES Context
+
+VARIABLES
+  pktFwdr
+  pktData
+  createdPkts
+  recvBuff
+  clrRecvBuffFlg
+
+INVARIANTS
+  @pMl_MPacket_inv_1 pktFwdr ∈ PKT ⇸ ND
+  @pMl_MPacket_inv_2 pktData ∈ PKT ⇸ ℤ
+  @pMl_MPacket_inv_3 createdPkts ⊆ PKT
+  @pMl_MReceive_inv_1 recvBuff ∈ ND ↔ PKT
+  @pMl_MReceive_inv_2 clrRecvBuffFlg ∈ ND ↔ PKT
+
+EVENTS
+  event INITIALISATION
+    then
+      @MPacket_int_1 pktFwdr = ∅
+      @MPacket_int_2 pktData = ∅
+      @MPacket_int_3 createdPkts = ∅
+      @MReceive_int_1 recvBuff = ∅
+      @MReceive_int_2 clrRecvBuffFlg = ∅
+  end
+
+  event creatingPkt
+    any x des pkt data
+    where
+      x ∈ ℤ
+      des ∈ ℙ(ℤ)
+      pkt ∈ PKT
+      data ∈ ℤ
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)
+      @MPacket_creating_pkt_g4 pkt ∉ dom(pktData)
+    then
+      @MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}
+      @MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}
+      @MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}
+  end
+
+  event start_tx
+    any x pkt
+    where
+      x ∈ ℤ
+      pkt ∈ PKT
+      @MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MPacket_set_pktFwdr_g1 pkt ∈ dom(pktFwdr)
+    then
+      @MPacket_set_pktFwdr_a2 pktFwdr := pktFwdr <+ {pkt ↦ x}
+  end
+
+  event receive
+    any nb pkt
+    where
+      nb ∈ ℤ
+      pkt ∈ PKT
+      @MReceive_receive_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_receive_g2 nb ↦ pkt ∉ recvBuff
+    then
+      @MReceive_receive_a1 recvBuff := recvBuff ∪ {nb ↦ pkt}
+  end
+
+  event clear_recvdBuff
+    any nb pkt
+    where
+      nb ∈ ℤ
+      pkt ∈ PKT
+      @MReceive_clear_recvdBuff_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_clear_recvdBuff_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_clear_recvdBuff_g3 nb ↦ pkt ∈ clrRecvBuffFlg
+    then
+      @MReceive_clear_recvdBuff_a1 recvBuff := recvBuff \ {nb ↦ pkt}
+  end
+
+  event fwdr_receive_pkt
+    any nb pkt
+    where
+      nb ∈ ℤ
+      pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_fwdr_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MReceive_fwdr_receive_pkt_g4 nb ∈ Dests
+    then
+      @MReceive_fwdr_receive_pkt_a1 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}
+  end
+
+  event dest_recv_pkt
+    any nb pkt
+    where
+      nb ∈ ℤ
+      pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_dest_receive_pkt_g2 nb ↦ pkt ∈ recvBuff
+      @MReceive_dest_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg
+      @MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ clrRecvBuffFlg
+    then
+      @MDestBuffer_record_destBuff_a1 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}
+  end
+
+end

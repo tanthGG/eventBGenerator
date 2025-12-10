@@ -1,0 +1,105 @@
+machine uM5 refines uM2 sees Context
+
+variables
+  pktFwdr
+  pktData
+  createdPkts
+  ndBuff
+  sentDown
+  sentUp
+  ctlNeighbours
+  destBuff
+  recvBuff
+  clrRecvBuffFlg
+  ctlSensedFlg
+  senseBuff
+  emergencyAlert
+
+invariants
+  @MSensingUnit_sensing_inv_1 ctlSensedFlg ∈ ND \ Dests → BOOL
+  @MSensingUnit_sensing_inv_2 senseBuff ∈ ND \ Dests → ℙ(ℤ)
+  @PActivate_inv_1 emergencyAlert ∈ BOOL
+
+events
+  event INITIALISATION extends INITIALISATION
+    then
+      @MSensingUnit_sensing_int_1 ctlSensedFlg := (ND \ Dests) × {FALSE}
+      @MSensingUnit_sensing_int_2 senseBuff := (ND \ Dests) × {∅}
+    end
+
+  event sensing
+    any x sf data
+    where
+      @MSensingUnit_sensing_g1 x ∈ ND \ Dests
+      @MSensingUnit_sensing_g2 sf ∈ BOOL
+      @MSensingUnit_sensing_g3 data ∈ ℤ
+      @MSensingUnit_sensing_g4 x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE
+    then
+      @MSensingUnit_sensing_a1 ctlSensedFlg(x) := sf
+      @MSensingUnit_sensing_a2 senseBuff(x) := senseBuff(x) ∪ {data}
+    end
+
+  event creatingDataPacket extends creatingDataPacket
+    where
+      @MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)
+    then
+      @MSensingUnit_removeSenseBuff_a1 senseBuff(x) := senseBuff(x) \ {data}
+    end
+
+  event creatingControlPacket extends creatingControlPacket
+  end
+
+  event start_tx extends start_tx
+  end
+
+  event send_down extends send_down
+  end
+
+  event send_up extends send_up
+  end
+
+  event receive extends receive
+  end
+
+  event clear_recvdBuff extends clear_recvdBuff
+  end
+
+  event fwdr_receive_pkt extends fwdr_receive_pkt
+  end
+
+  event dest_recv_pkt extends dest_recv_pkt
+  end
+
+  event finish_tx_pkt extends finish_tx_pkt
+  end
+
+  event final_tx_pkt extends final_tx_pkt
+  end
+  event actuating
+    any data
+    where
+      @PActivate_actuating_g1 data ∈ ℤ
+      @PActivate_actuating_g2 data ≥ safetyThreshold
+      @PActivate_actuating_g3 emergencyAlert = FALSE
+    then
+      @PActivate_actuating_a1 emergencyAlert := TRUE
+    end
+
+  event no_actuating
+    any data
+    where
+      @PActivate_no_actuating_g1 data ∈ ℤ
+      @PActivate_no_actuating_g2 data < safetyThreshold
+  end
+
+  event reset_actuatingStatus
+    any data
+    where
+      @PActivate_reset_actuating_g1 data ≥ safetyThreshold
+      @PActivate_reset_actuating_g2 emergencyAlert = TRUE
+    then
+      @PActivate_reset_actuating_a1 emergencyAlert := FALSE
+    end
+
+
+end
