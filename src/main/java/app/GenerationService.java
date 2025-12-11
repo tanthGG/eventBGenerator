@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -82,13 +83,18 @@ public class GenerationService {
   }
 
   public Optional<EventBIR> buildAdditionalMachineFromTemplate(
-      String templateName, EventBIR reference, boolean includeActivateContent, int refinementCount) {
+      String templateName,
+      EventBIR reference,
+      List<Path> activatePatternPaths,
+      int refinementCount) {
     if (reference == null || thesisFolder == null) return Optional.empty();
     Path template = thesisFolder.resolve(templateName);
     if (!Files.isRegularFile(template)) return Optional.empty();
+    boolean includeActivateContent =
+        activatePatternPaths != null && !activatePatternPaths.isEmpty();
     try {
       String machineText = Files.readString(template, StandardCharsets.UTF_8);
-      machineText = maybeAugmentWithActivate(machineText, includeActivateContent);
+      machineText = maybeAugmentWithActivate(machineText, activatePatternPaths);
       int suffix = Math.max(refinementCount, reference.refinement() + 2);
       String machineName = "uM" + suffix;
       machineText = renameMachine(machineText, machineName);
@@ -208,14 +214,22 @@ public class GenerationService {
     }
   }
 
-  private String maybeAugmentWithActivate(String machineText, boolean includeActivate) {
-    if (!includeActivate) return machineText;
-    if (machineText == null || machineText.contains("emergencyAlert")) return machineText;
-    String withVariable = insertBeforeMarker(machineText, "\ninvariants", "  emergencyAlert\n");
-    String withInvariant =
-        insertBeforeMarker(
-            withVariable, "\nevents", "  @PActivate_inv_1 emergencyAlert ∈ BOOL\n");
-    return insertBeforeFinalEnd(withInvariant, ACTIVATE_EVENTS_BLOCK);
+  private String maybeAugmentWithActivate(String machineText, List<Path> activatePatterns) {
+    if (machineText == null || activatePatterns == null || activatePatterns.isEmpty()) {
+      return machineText;
+    }
+
+    String augmented = machineText;
+    if (!augmented.contains("emergencyAlert")) {
+      String withVariable = insertBeforeMarker(augmented, "\ninvariants", "  emergencyAlert\n");
+      String withInvariant =
+          insertBeforeMarker(
+              withVariable, "\nevents", "  @PActivate_inv_1 emergencyAlert ∈ BOOL\n");
+      augmented = insertBeforeFinalEnd(withInvariant, ACTIVATE_EVENTS_BLOCK);
+    }
+
+    List<String> initAssignments = loadActivateInitAssignments(activatePatterns);
+    return insertActivateInitActions(augmented, initAssignments);
   }
 
   private static String insertBeforeMarker(String text, String marker, String addition) {
@@ -264,6 +278,56 @@ public class GenerationService {
     end
 
 """;
+
+  private String insertActivateInitActions(String machineText, List<String> assignments) {
+    if (machineText == null || assignments == null || assignments.isEmpty()) {
+      return machineText;
+    }
+    int eventIdx = machineText.indexOf("event INITIALISATION");
+    if (eventIdx < 0) return machineText;
+    int thenIdx = machineText.indexOf("then", eventIdx);
+    if (thenIdx < 0) return machineText;
+    int insertPos = machineText.indexOf('\n', thenIdx);
+    if (insertPos < 0) return machineText;
+    insertPos += 1;
+
+    StringBuilder block = new StringBuilder();
+    for (String assignment : assignments) {
+      if (assignment == null) continue;
+      String trimmed = assignment.trim();
+      if (trimmed.isEmpty() || machineText.contains(trimmed)) continue;
+      block.append("      ").append(trimmed).append("\n");
+    }
+    if (block.length() == 0) return machineText;
+    return machineText.substring(0, insertPos) + block + machineText.substring(insertPos);
+  }
+
+  private List<String> loadActivateInitAssignments(List<Path> activatePatterns) {
+    List<String> assignments = new ArrayList<>();
+    if (activatePatterns == null || activatePatterns.isEmpty()) return assignments;
+    LinkedHashSet<String> seen = new LinkedHashSet<>();
+    for (Path path : activatePatterns) {
+      if (path == null) continue;
+      try {
+        PatternModel model = parser.parse(path);
+        PatternModel.Event initEvent =
+            model.events.stream()
+                .filter(e -> e.name != null && "Initialisation".equalsIgnoreCase(e.name))
+                .findFirst()
+                .orElse(null);
+        if (initEvent == null) continue;
+        for (PatternModel.Action action : initEvent.actions) {
+          if (action == null || action.assignment == null) continue;
+          String trimmed = action.assignment.trim();
+          if (trimmed.isEmpty() || !seen.add(trimmed)) continue;
+          assignments.add(trimmed);
+        }
+      } catch (Exception e) {
+        System.err.println("Failed to parse activate pattern " + path + ": " + e.getMessage());
+      }
+    }
+    return assignments;
+  }
 
   private static String renameMachine(String text, String newName) {
     if (text == null || newName == null || newName.isBlank()) return text;

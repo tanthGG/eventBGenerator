@@ -23,6 +23,7 @@ invariants
 events
   event INITIALISATION extends INITIALISATION
     then
+      @PActivate_inv_1 emergencyAlert := FALSE
       @MSensingUnit_sensing_int_1 ctlSensedFlg := (ND \ Dests) × {FALSE}
       @MSensingUnit_sensing_int_2 senseBuff := (ND \ Dests) × {∅}
     end

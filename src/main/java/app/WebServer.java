@@ -125,6 +125,7 @@ public class WebServer {
     boolean includeActivateContent = false;
     boolean hasSeenSensing = false;
     Set<Path> previousPatterns = null;
+    List<Path> activatePatternPaths = new ArrayList<>();
 
     for (List<String> fileNames : refinements) {
       if (fileNames == null || fileNames.isEmpty()) {
@@ -147,6 +148,9 @@ public class WebServer {
         }
         if (isActivatePattern(fileName)) {
           includeActivateContent = true;
+          if (path != null && !activatePatternPaths.contains(path)) {
+            activatePatternPaths.add(path);
+          }
           if (isolateActivate) {
             continue;
           }
@@ -204,7 +208,7 @@ public class WebServer {
       EventBIR reference = generatedIrs.get(generatedIrs.size() - 1);
       var templateIr =
           generationService.buildAdditionalMachineFromTemplate(
-              "M3GGD.txt", reference, includeActivateContent, refinementIndex);
+              "M3GGD.txt", reference, activatePatternPaths, refinementIndex);
       if (templateIr.isEmpty()) {
         send(exchange, 500, "Sensing unit template unavailable.", "text/plain");
         return;

@@ -24,7 +24,7 @@
 
     <Event name="Initialisation">
       <Actions>
-        <Action var="emergencyAlert" value="FALSE"/>
+        <Action var="@PActivate_inv_1 emergencyAlert := FALSE"/>
       </Actions>
     </Event>
 
