@@ -17,37 +17,58 @@ import java.util.stream.Collectors;
  */
 public final class PatternCombinationEngine {
 
-  private static final List<Rule> RULES = List.of(
-      rule(
-          "creating_Pkt",
-          ref("PPacket", "creating_Pkt"),
-          ref("PNDBuffer", "record_ndBuff")),
-      rule(
-          "start_tx",
-          ref("PSend", "start_tx"),
-          ref("PNDBuffer", "remove_ndBuff"),
-          ref("PPacket", "set_pktFwdr")),
-      rule(
-          "receive",
-          ref("PReceive", "receive"),
-          ref("PSend", "remove_ctlNeighbours")),
-      rule(
-          "fwdr_receive_pkts",
-          ref("PReceive", "fwdr_receive_pkts"),
-          ref("PNDBuffer", "record_ndBuff")),
-      rule(
-          "dest_recv_pkts",
-          ref("PReceive", "dest_recv_pkts"),
-          ref("PDestBuffer", "record_destBuff")),
-      rule(
-          "finish_tx_pkts",
-          ref("PSend", "finish_tx_pkts"),
-          ref("PNDBuffer", "is_In_Range_ndBuff")),
-      rule(
-          "final_tx_pkts",
-          ref("PSend", "final_tx_pkts"),
-          ref("PNDBuffer", "isNot_In_Range_ndBuff"))
-  );
+  private static final List<Rule> RULES =
+        List.of(
+          rule(
+              "creatingDataPacket",
+              1,
+              Integer.MAX_VALUE,
+              false,
+              ref("MPacket", "creatingPkt"),
+              ref("MNDBuffer", "creatingPkt"),
+              ref("MSensingUnit", "creatingDataPacket"),
+              ref("MSensingUnit", "remove_senseBuff")),
+          rule(
+              "creatingDataPacket",
+              0,
+              0,
+              false,
+              ref("MPacket", "creatingPkt"),
+              ref("MNDBuffer", "creatingPkt"),
+              ref("MSensingUnit", "creatingDataPacket")),
+          rule(
+              "creatingControlPacket",
+              0,
+              Integer.MAX_VALUE,
+              false,
+              ref("MPacket", "creatingPkt"),
+              ref("MNDBuffer", "creatingPkt"),
+              ref("MSensingUnit", "creatingControlPacket")),
+          rule("creatingPkt", ref("MPacket", "creatingPkt"), ref("MNDBuffer", "creatingPkt")),
+          rule(
+              "start_tx",
+              ref("MSend", "start_tx"),
+              ref("MNDBuffer", "start_tx"),
+              ref("MPacket", "start_tx")),
+          rule("send_down", ref("MSend", "send_down")),
+          rule("send_up", ref("MSend", "send_up")),
+          rule("receive", ref("MReceive", "receive"), ref("MSend", "receive")),
+          rule(
+              "fwdr_receive_pkt",
+              ref("MReceive", "fwdr_receive_pkt"),
+              ref("MNDBuffer", "fwdr_receive_pkt")),
+          rule(
+              "dest_recv_pkt",
+              ref("MReceive", "dest_recv_pkt"),
+              ref("MDestBuffer", "dest_recv_pkt")),
+          rule(
+              "finish_tx_pkt",
+              ref("MSend", "finish_tx_pkt"),
+              ref("MNDBuffer", "finish_tx_pkt")),
+          rule(
+              "final_tx_pkt",
+              ref("MSend", "final_tx_pkt"),
+              ref("MNDBuffer", "final_tx_pkt")));
 
   /**
    * Applies the combination rules to the supplied list of events. When a rule matches,
@@ -55,7 +76,7 @@ public final class PatternCombinationEngine {
    * originals. If a rule cannot be fulfilled (e.g. because one of its constituent
    * patterns is missing) it is ignored gracefully.
    */
-  public List<PatternModel.Event> apply(List<PatternModel.Event> events) {
+  public List<PatternModel.Event> apply(List<PatternModel.Event> events, int refinementLevel) {
     if (events == null || events.isEmpty()) {
       return events == null ? List.of() : events;
     }
@@ -69,31 +90,49 @@ public final class PatternCombinationEngine {
     }
 
     Set<EventKey> consumed = new LinkedHashSet<>();
+    Set<EventKey> used = new LinkedHashSet<>();
     List<PatternModel.Event> composed = new ArrayList<>();
 
+    EventKey sensingDataKey =
+        key(PatternNames.instantiate("MSensingUnit"), "creatingDataPacket");
+    EventKey sensingControlKey =
+        key(PatternNames.instantiate("MSensingUnit"), "creatingControlPacket");
+    boolean hasSensingSplit =
+        lookup.containsKey(sensingDataKey) || lookup.containsKey(sensingControlKey);
+
     for (Rule rule : RULES) {
+      if (refinementLevel < rule.minRefinement()
+          || refinementLevel > rule.maxRefinement()) {
+        continue;
+      }
+      if ("creatingPkt".equals(rule.outputName()) && hasSensingSplit) {
+        continue;
+      }
       List<PatternModel.Event> matches = new ArrayList<>();
+      List<EventKey> referencedKeys = new ArrayList<>();
       for (EventRef ref : rule.refs()) {
-        PatternModel.Event evt = lookup.get(ref.key());
-        if (evt == null) {
+        EventKey refKey = ref.key();
+        PatternModel.Event evt = lookup.get(refKey);
+        if (evt == null || consumed.contains(refKey)) {
           matches = null;
           break;
         }
         matches.add(evt);
+        referencedKeys.add(refKey);
       }
       if (matches == null || matches.isEmpty()) {
         continue;
       }
       composed.add(merge(rule.outputName(), matches));
-      for (PatternModel.Event evt : matches) {
-        EventKey k = key(evt);
-        if (k != null) consumed.add(k);
+      used.addAll(referencedKeys);
+      if (rule.consumeMatches()) {
+        consumed.addAll(referencedKeys);
       }
     }
 
     for (PatternModel.Event evt : events) {
       EventKey k = key(evt);
-      if (k == null || !consumed.contains(k)) {
+      if (k == null || (!consumed.contains(k) && !used.contains(k))) {
         composed.add(evt);
       }
     }
@@ -181,11 +220,24 @@ public final class PatternCombinationEngine {
   }
 
   private static Rule rule(String name, EventRef... refs) {
-    return new Rule(name, List.of(refs));
+    return new Rule(name, List.of(refs), 0, Integer.MAX_VALUE, true);
+  }
+
+  private static Rule rule(String name, int minRefinement, EventRef... refs) {
+    return new Rule(name, List.of(refs), minRefinement, Integer.MAX_VALUE, true);
+  }
+
+  private static Rule rule(
+      String name,
+      int minRefinement,
+      int maxRefinement,
+      boolean consumeMatches,
+      EventRef... refs) {
+    return new Rule(name, List.of(refs), minRefinement, maxRefinement, consumeMatches);
   }
 
   private static EventRef ref(String pattern, String event) {
-    return new EventRef(pattern, event);
+    return new EventRef(PatternNames.instantiate(pattern), event);
   }
 
   private static String reconcileType(String current, String incoming) {
@@ -257,6 +309,10 @@ public final class PatternCombinationEngine {
     return false;
   }
 
+  private static EventKey key(String pattern, String event) {
+    return new EventKey(normalize(pattern), normalize(event));
+  }
+
   private record EventKey(String pattern, String event) {}
 
   private record EventRef(String pattern, String event) {
@@ -267,5 +323,10 @@ public final class PatternCombinationEngine {
     }
   }
 
-  private record Rule(String outputName, List<EventRef> refs) {}
+  private record Rule(
+      String outputName,
+      List<EventRef> refs,
+      int minRefinement,
+      int maxRefinement,
+      boolean consumeMatches) {}
 }

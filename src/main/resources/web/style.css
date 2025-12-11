@@ -142,6 +142,31 @@ input[type="number"]:focus {
   height: 18px;
 }
 
+.pattern-item.inherited {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.pattern-item.inherited input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
+.pattern-item .tag {
+  margin-left: auto;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.72rem;
+  border-radius: 999px;
+  background: rgba(47, 94, 215, 0.12);
+  color: #2f5ed7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pattern-item.inherited .tag {
+  background: rgba(82, 96, 109, 0.18);
+  color: #52606d;
+}
+
 .refinement-group {
   margin-top: 1.5rem;
   padding: 1.25rem;

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="IPacket_Bundle">
+
+  <Context name="Context_IPacket">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+      <Constant name="initialSrcAddr"/>
+      <Constant name="finalDestAddr"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+      <Axiom expression="@cM1_axm0_7 initialSrcAddr ∈ PKT → ND"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="IPacket" type="EventComponent" description="Packet creation and forwarding pattern">
+    <ContextRef name="Context_IPacket"/>
+
+    <Variables>
+      <Variable name="pktFwdr" type="PKT ⇸ ND"/>
+      <Variable name="pktData" type="PKT ⇸ ℤ"/>
+      <Variable name="createdPkts" type="ℙ(PKT)"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pMl_MPacket_inv_1 pktFwdr ∈ PKT ⇸ ND"/>
+      <Invariant expression="@pMl_MPacket_inv_2 pktData ∈ PKT ⇸ ℤ"/>
+      <Invariant expression="@pMl_MPacket_inv_3 createdPkts ⊆ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MPacket_int_1 pktFwdr = ∅"/>
+      <Action expression="@MPacket_int_2 pktData = ∅"/>
+      <Action expression="@MPacket_int_3 createdPkts = ∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="creatingPkt">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="des" type="ℙ(ℤ)"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ"/>
+          <Guard expression="@MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)"/>
+          <Guard expression="@MPacket_creating_pkt_g3 pkt ∉ dom(pktFwdr)"/>
+          <Guard expression="@MPacket_creating_pkt_g4 pkt ∉ dom(pktData)"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MPacket_creating_pkt_a1 createdPkts := createdPkts ∪ {pkt}"/>
+          <Action expression="@MPacket_creating_pkt_a2 pktFwdr := pktFwdr ∪ {pkt ↦ x}"/>
+          <Action expression="@MPacket_creating_pkt_a3 pktData := pktData ∪ {pkt ↦ data}"/>
+        </Actions>
+      </Event>
+
+      <Event name="start_tx">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MPacket_set_pktFwdr_g1 pkt ∈ dom(pktFwdr)"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MPacket_set_pktFwdr_a2 pktFwdr := pktFwdr &lt;+ {pkt ↦ x}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

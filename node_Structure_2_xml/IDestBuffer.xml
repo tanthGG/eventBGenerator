@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="IDestBuffer_Bundle">
+
+  <Context name="Context_IDestBuffer">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="Dests"/>
+      <Constant name="ND"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="IDestBuffer" type="EventComponent" description="Destination buffer tracking pattern">
+    <ContextRef name="Context_IDestBuffer"/>
+
+    <Variables>
+      <Variable name="destBuff" type="Dests ↦ PKT"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pMl_MDestBuffer_inv_1 destBuff ∈ Dests ↦ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MDestBuffer_int_1 destBuff := ∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="dest_recv_pkt">
+        <Parameters>
+          <Param name="nb" type="Z"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_dest_receive_pkt_g3 nb ∈ Dests"/>
+          <Guard expression="@MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ destBuff"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MDestBuffer_ndBuff_al destBuff := destBuff ∪ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

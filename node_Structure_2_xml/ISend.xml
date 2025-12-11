@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="ISend_Bundle">
+
+  <Context name="Context_ISend">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="ISend" type="EventComponent" description="Send scheduling pattern">
+    <ContextRef name="Context_ISend"/>
+
+    <Variables>
+      <Variable name="sentDown" type="ND ↔ PKT"/>
+      <Variable name="sentUp" type="ND ↔ PKT"/>
+      <Variable name="ctlNeighbours" type="PKT ↔ ND"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pMl_MSend_inv_1 sentUp ∈ ND ↔ PKT"/>
+      <Invariant expression="@pMl_MSend_inv_2 sentDown ∈ ND ↔ PKT"/>
+      <Invariant expression="@pMl_MSend_inv_3 ctlNeighbours ∈ PKT ↔ ND"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MSend_int_1 sentUp = ∅"/>
+      <Action expression="@MSend_int_2 sentDown = ∅"/>
+      <Action expression="@MSend_int_3 ctlNeighbours = ∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="start_tx">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MSend_start_tx_g2 x ↦ pkt ∉ sentDown"/>
+          <Guard expression="@MSend_start_tx_g3 x ↦ pkt ∉ sentUp"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSend_start_tx_a1 sentDown := sentDown ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="send_down">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_send_down_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MSend_send_down_g2 x ↦ pkt ∈ sentDown"/>
+        </Guards>
+      </Event>
+
+      <Event name="send_up">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="nbrs" type="ℙ(ℤ)"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_sent_up_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MSend_sent_up_g2 x ↦ pkt ∉ sentUp"/>
+          <Guard expression="@MSend_sent_up_g3 x ↦ pkt ∈ sentDown"/>
+          <Guard expression="@MSend_sent_up_g4 pkt ∉ dom(ctlNeighbours)"/>
+          <Guard expression="@MSend_sent_up_g5 nbrs ∈ {n| n ∈ ℙ(ND)} ∧ nbrs ≠ ∅"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSend_sent_up_a1 ctlNeighbours := ctlNeighbours ∪ ({pkt} × nbrs)"/>
+          <Action expression="@MSend_sent_up_a2 sentDown := sentDown \ {x ↦ pkt}"/>
+          <Action expression="@MSend_sent_up_a3 sentUp := sentUp ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="receive">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_receive_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MSend_remove_ctlNeighbour_g1 nb ↦ pkt ∉ sentUp"/>
+          <Guard expression="@MSend_remove_ctlNeighbour_g2 nb ↦ pkt ∈ sentDown"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSend_remove_ctlNeighbour_a1 ctlNeighbours := ctlNeighbours \ {pkt ↦ nb}"/>
+        </Actions>
+      </Event>
+
+      <Event name="finish_tx_pkt">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_finish_tx_pkt_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MSend_finish_tx_pkt_g2 {pkt} ◁ ctlNeighbours = ∅"/>
+          <Guard expression="@MSend_finish_tx_pkt_g3 pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)"/>
+          <Guard expression="@MSend_finish_tx_pkt_g4 x ∈ dom(sentUp)"/>
+          <Guard expression="@MSend_finish_tx_pkt_g5 x ↦ pkt ∈ sentUp"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSend_finish_tx_pkt_a1 sentUp := sentUp \ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="final_tx_pkt">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_final_tx_pkt_g1 pkt ∈ PKT"/>
+          <Guard expression="@MSend_final_tx_pkt_g2 {pkt} ◁ ctlNeighbours = ∅"/>
+          <Guard expression="@MSend_final_tx_pkt_g3 pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSend_final_tx_pkt_a1 sentUp := sentUp ⩥ {pkt}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

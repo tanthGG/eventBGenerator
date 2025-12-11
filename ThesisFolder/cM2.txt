@@ -1,0 +1,14 @@
+context cM2
+extends cM1
+
+sets TYPE
+
+constants DATA CONTROL type CTL_VAL
+
+axioms
+  @axm2_1 DATA ∈ TYPE
+  @axm2_2 CONTROL ⊆ TYPE
+  @axm2_3 partition(TYPE, CONTROL, {DATA})
+  @axm2_4 type ∈ PKT ↦ TYPE
+  @axm2_5 CTL_VAL = 0
+end

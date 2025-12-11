@@ -12,11 +12,10 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
@@ -31,15 +30,35 @@ public class WebServer {
   private static final Pattern QUOTED_VALUE = Pattern.compile("\"([^\"]+)\"");
   private static final Pattern PROJECT_NAME =
       Pattern.compile("\"projectName\"\\s*:\\s*\"([^\"]+)\"");
+  private static final String DEFAULT_PROJECT_NAME = "Refinement_Model_Generated";
 
   private final GenerationService generationService;
   private final Path projectRoot;
+  private static final String PRIMARY_PATTERN_DIR = "node_Structure_2_xml";
+  private static final String LEGACY_PATTERN_DIR = "node_Structure";
+
   private final Path nodeStructureDir;
 
   public WebServer(Path projectRoot, GenerationService generationService) {
     this.projectRoot = projectRoot;
     this.generationService = generationService;
-    this.nodeStructureDir = projectRoot.resolve("node_Structure");
+    this.nodeStructureDir = resolvePatternDirectory(projectRoot);
+  }
+
+  private static Path resolvePatternDirectory(Path projectRoot) {
+    Path primary = projectRoot.resolve(PRIMARY_PATTERN_DIR);
+    if (Files.isDirectory(primary)) {
+      System.out.println("Using pattern directory: " + PRIMARY_PATTERN_DIR);
+      return primary;
+    }
+    Path legacy = projectRoot.resolve(LEGACY_PATTERN_DIR);
+    if (Files.isDirectory(legacy)) {
+      System.out.println(
+          "Primary pattern directory not found, falling back to: " + LEGACY_PATTERN_DIR);
+      return legacy;
+    }
+    // Default to primary path so newly created directories are picked up automatically.
+    return primary;
   }
 
   public void start(int port) throws IOException {
@@ -97,18 +116,25 @@ public class WebServer {
 
     String projectName = sanitizeProjectName(request.projectName());
     if (projectName.isBlank()) {
-      projectName = defaultProjectName();
+      projectName = DEFAULT_PROJECT_NAME;
     }
 
-    List<Path> generatedFilePaths = new ArrayList<>();
-    List<String> fileSummaries = new ArrayList<>();
-    int refinementIndex = 1;
+    List<EventBIR> generatedIrs = new ArrayList<>();
+    int refinementIndex = 0;
+    boolean includeSensingTemplate = false;
+    boolean includeActivateContent = false;
+    boolean hasSeenSensing = false;
+    Set<Path> previousPatterns = null;
+    List<Path> activatePatternPaths = new ArrayList<>();
 
     for (List<String> fileNames : refinements) {
       if (fileNames == null || fileNames.isEmpty()) {
         send(exchange, 400, "Each refinement must include at least one pattern", "text/plain");
         return;
       }
+
+      boolean refinementHasSensing = fileNames.stream().anyMatch(WebServer::isSensingUnitPattern);
+      boolean isolateActivate = refinementHasSensing || hasSeenSensing;
 
       List<Path> patternPaths = new ArrayList<>();
       for (String fileName : fileNames) {
@@ -117,8 +143,39 @@ public class WebServer {
           send(exchange, 404, "Pattern not found: " + fileName, "text/plain");
           return;
         }
+        if (isSensingUnitPattern(fileName)) {
+          includeSensingTemplate = true;
+        }
+        if (isActivatePattern(fileName)) {
+          includeActivateContent = true;
+          if (path != null && !activatePatternPaths.contains(path)) {
+            activatePatternPaths.add(path);
+          }
+          if (isolateActivate) {
+            continue;
+          }
+        }
         patternPaths.add(path);
       }
+
+      if (isolateActivate) {
+        patternPaths.removeIf(WebServer::isActivatePath);
+      }
+
+      if (patternPaths.isEmpty()) {
+        continue;
+      }
+
+      LinkedHashSet<Path> uniquePatterns = new LinkedHashSet<>(patternPaths);
+      if (uniquePatterns.isEmpty()) {
+        continue;
+      }
+
+      if (previousPatterns != null && previousPatterns.equals(uniquePatterns)) {
+        continue;
+      }
+
+      patternPaths = new ArrayList<>(uniquePatterns);
 
       EventBIR ir;
       try {
@@ -138,12 +195,37 @@ public class WebServer {
 
       Path ctxPath = machineDir.resolve(ir.ctxName() + ".ctx");
       Path machPath = machineDir.resolve(ir.machName() + ".bcm");
-      generatedFilePaths.add(ctxPath);
-      generatedFilePaths.add(machPath);
-      fileSummaries.add(relativizeForResponse(workspace, ctxPath));
-      fileSummaries.add(relativizeForResponse(workspace, machPath));
+      generatedIrs.add(ir);
+      previousPatterns = uniquePatterns;
 
       refinementIndex++;
+      if (refinementHasSensing) {
+        hasSeenSensing = true;
+      }
+    }
+
+    if (includeSensingTemplate && !generatedIrs.isEmpty()) {
+      EventBIR reference = generatedIrs.get(generatedIrs.size() - 1);
+      var templateIr =
+          generationService.buildAdditionalMachineFromTemplate(
+              "M3GGD.txt", reference, activatePatternPaths, refinementIndex);
+      if (templateIr.isEmpty()) {
+        send(exchange, 500, "Sensing unit template unavailable.", "text/plain");
+        return;
+      }
+      EventBIR extraIr = templateIr.get();
+      try {
+        generationService.writeToProject(projectName, extraIr);
+      } catch (IOException e) {
+        send(exchange, 500, "Failed to write sensing unit machine: " + e.getMessage(), "text/plain");
+        return;
+      }
+      generatedIrs.add(extraIr);
+    }
+
+    if (generatedIrs.isEmpty()) {
+      send(exchange, 500, "No artefacts produced", "text/plain");
+      return;
     }
 
     Path projectDir = workspace.resolve(projectName);
@@ -151,18 +233,19 @@ public class WebServer {
     if (projectPath.isEmpty()) {
       projectPath = relativizeForResponse(workspace, projectDir);
     }
-    byte[] archive;
+    ZipPayload zipPayload;
     try {
-      archive = zipGeneratedFiles(projectName, generatedFilePaths, workspace);
+      zipPayload = zipGeneratedFiles(projectName, generatedIrs);
     } catch (IOException e) {
       send(exchange, 500, "Failed to assemble download: " + e.getMessage(), "text/plain");
       return;
     }
 
-    String downloadName = projectName.isBlank() ? "eventb-artifacts.zip" : projectName + ".zip";
+    String downloadBase = projectName.isBlank() ? DEFAULT_PROJECT_NAME : projectName;
+    String downloadName = downloadBase + ".zip";
     String safeProjectPath = sanitizeHeaderValue(projectPath);
     String safeProjectName = sanitizeHeaderValue(projectName);
-    String filesHeader = fileSummaries.stream()
+    String filesHeader = zipPayload.entries().stream()
         .map(this::sanitizeHeaderValue)
         .filter(s -> !s.isEmpty())
         .collect(Collectors.joining(";"));
@@ -180,15 +263,14 @@ public class WebServer {
       exchange.getResponseHeaders().set("X-Generated-Files", filesHeader);
     }
 
-    exchange.sendResponseHeaders(200, archive.length);
+    exchange.sendResponseHeaders(200, zipPayload.data().length);
     try (OutputStream os = exchange.getResponseBody()) {
-      os.write(archive);
+      os.write(zipPayload.data());
     }
   }
 
   private String defaultProjectName() {
-    return "web-session-" + DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")
-        .format(LocalDateTime.now());
+    return DEFAULT_PROJECT_NAME;
   }
 
   private String relativizeForResponse(Path root, Path target) {
@@ -207,55 +289,39 @@ public class WebServer {
     return absoluteTarget.toString().replace('\\', '/');
   }
 
-  private byte[] zipGeneratedFiles(String projectName, List<Path> generatedFiles, Path workspace)
+  private ZipPayload zipGeneratedFiles(String projectName, List<EventBIR> irs)
       throws IOException {
-    String root = projectName.isBlank() ? "eventb-artifacts" : projectName;
-    root = root.replaceAll("[/\\\\]+", "-");
-    if (root.isBlank()) root = "eventb-artifacts";
+    if (irs == null || irs.isEmpty()) {
+      throw new IOException("No artefacts available for zipping");
+    }
+    String root = DEFAULT_PROJECT_NAME;
     if (!root.endsWith("/")) root = root + "/";
 
-    Path absWorkspace = workspace != null ? workspace.toAbsolutePath().normalize() : null;
+    EventBIR last = irs.get(irs.size() - 1);
+    List<String> entries = new ArrayList<>();
 
     try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
          ZipOutputStream zip = new ZipOutputStream(baos, StandardCharsets.UTF_8)) {
-      Set<String> addedDirs = new HashSet<>();
       zip.putNextEntry(new ZipEntry(root));
       zip.closeEntry();
-      addedDirs.add(root);
 
-      for (Path file : generatedFiles) {
-        Path normalized = file.toAbsolutePath().normalize();
-        if (!Files.exists(normalized) || !Files.isRegularFile(normalized)) {
-          continue;
-        }
-        String relative = normalized.getFileName().toString();
-        if (absWorkspace != null && normalized.startsWith(absWorkspace)) {
-          relative = absWorkspace.relativize(normalized).toString().replace('\\', '/');
-        }
-        String entryName = root + relative;
-        ensureDirectoryEntries(zip, addedDirs, entryName);
+      String ctxEntry = root + "Context_Machine.ctx";
+      entries.add(ctxEntry);
+      zip.putNextEntry(new ZipEntry(ctxEntry));
+      zip.write(last.ctxText().getBytes(StandardCharsets.UTF_8));
+      zip.closeEntry();
+
+      for (int i = 0; i < irs.size(); i++) {
+        EventBIR ir = irs.get(i);
+        String entryName = root + ir.machName() + ".bcm";
+        entries.add(entryName);
         zip.putNextEntry(new ZipEntry(entryName));
-        try (InputStream in = Files.newInputStream(normalized)) {
-          in.transferTo(zip);
-        }
+        zip.write(ir.machineText().getBytes(StandardCharsets.UTF_8));
         zip.closeEntry();
       }
 
       zip.finish();
-      return baos.toByteArray();
-    }
-  }
-
-  private void ensureDirectoryEntries(ZipOutputStream zip, Set<String> addedDirs, String entryName)
-      throws IOException {
-    int index = entryName.lastIndexOf('/');
-    while (index > 0) {
-      String dir = entryName.substring(0, index + 1);
-      if (addedDirs.add(dir)) {
-        zip.putNextEntry(new ZipEntry(dir));
-        zip.closeEntry();
-      }
-      index = dir.lastIndexOf('/', dir.length() - 2);
+      return new ZipPayload(baos.toByteArray(), entries);
     }
   }
 
@@ -327,6 +393,23 @@ public class WebServer {
     return -1;
   }
 
+  private static boolean isSensingUnitPattern(String fileName) {
+    if (fileName == null) return false;
+    String normalized = fileName.trim().toLowerCase(Locale.ROOT);
+    return normalized.endsWith("isensingunit.xml") || normalized.endsWith("psensingunit.xml");
+  }
+
+  private static boolean isActivatePattern(String fileName) {
+    if (fileName == null) return false;
+    String normalized = fileName.trim().toLowerCase(Locale.ROOT);
+    return normalized.endsWith("iactivate.xml") || normalized.endsWith("pactivate.xml");
+  }
+
+  private static boolean isActivatePath(Path path) {
+    if (path == null || path.getFileName() == null) return false;
+    return isActivatePattern(path.getFileName().toString());
+  }
+
   private void send(HttpExchange exchange, int status, String body, String contentType) throws IOException {
     byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
     exchange.getResponseHeaders().set("Content-Type", contentType + "; charset=utf-8");
@@ -365,6 +448,8 @@ public class WebServer {
       }
     }
   }
+
+  private record ZipPayload(byte[] data, List<String> entries) {}
 
   private record GenerateRequest(String projectName, List<List<String>> refinements) {}
 }

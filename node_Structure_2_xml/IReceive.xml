@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="IReceive_Bundle">
+
+  <Context name="Context_IReceive">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="IReceive" type="EventComponent" description="Receive buffer pattern">
+    <ContextRef name="Context_IReceive"/>
+
+    <Variables>
+      <Variable name="recvBuff" type="ND ↔ PKT"/>
+      <Variable name="clrRecvBuffFlg" type="ND ↔ PKT"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pMl_MReceive_inv_1 recvBuff ∈ ND ↔ PKT"/>
+      <Invariant expression="@pMl_MReceive_inv_2 clrRecvBuffFlg ∈ ND ↔ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MReceive_int_1 recvBuff = ∅"/>
+      <Action expression="@MReceive_int_2 clrRecvBuffFlg = ∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="receive">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_receive_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_receive_g2 nb ↦ pkt ∉ recvBuff"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MReceive_receive_a1 recvBuff := recvBuff ∪ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="clear_recvdBuff">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_clear_recvdBuff_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_clear_recvdBuff_g2 nb ↦ pkt ∈ recvBuff"/>
+          <Guard expression="@MReceive_clear_recvdBuff_g3 nb ↦ pkt ∈ clrRecvBuffFlg"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MReceive_clear_recvdBuff_a1 recvBuff := recvBuff \ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="fwdr_receive_pkt">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g2 nb ↦ pkt ∈ recvBuff"/>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg"/>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g4 nb ∈ Dests"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MReceive_fwdr_receive_pkt_a1 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="dest_recv_pkt">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_dest_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_dest_receive_pkt_g2 nb ↦ pkt ∈ recvBuff"/>
+          <Guard expression="@MReceive_dest_receive_pkt_g3 nb ↦ pkt ∉ clrRecvBuffFlg"/>
+          <Guard expression="@MDestBuffer_record_destBuff_g1 nb ↦ pkt ∉ clrRecvBuffFlg"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MDestBuffer_record_destBuff_a1 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

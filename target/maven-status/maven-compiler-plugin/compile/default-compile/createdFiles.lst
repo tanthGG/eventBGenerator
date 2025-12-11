@@ -1,6 +1,7 @@
 app/PatternModel$Invariant.class
 app/PatternComposer.class
 app/PatternModel$Variable.class
+app/PatternNames.class
 app/Main.class
 app/EventBWriter.class
 app/PatternCombinationEngine$EventKey.class
@@ -16,9 +17,11 @@ app/RodinProjectService.class
 app/GenerationService.class
 app/PatternModel$Context.class
 app/EventBMapper.class
+app/GenerationService$LegacyTemplate.class
 app/PatternModel$Guard.class
 app/WebServer.class
 app/WebServer$GenerateRequest.class
 app/WebServer$StaticHandler.class
 app/PatternCombinationEngine.class
+app/WebServer$ZipPayload.class
 app/PatternModel$Action.class

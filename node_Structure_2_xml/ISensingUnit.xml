@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="ISensingUnit_Bundle">
+
+  <Context name="Context_ISensingUnit">
+    <Sets>
+      <Set name="PKT"/>
+      <Set name="TYPE"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+      <Constant name="initialSrcAddr"/>
+      <Constant name="finalDestAddr"/>
+      <Constant name="type"/>
+      <Constant name="DATA"/>
+      <Constant name="CONTROL"/>
+      <Constant name="CTL_VAL"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+      <Axiom expression="@cM1_axm0_7 initialSrcAddr ∈ PKT → ND"/>
+      <Axiom expression="@cM2_axm2_1 DATA ∈ TYPE"/>
+      <Axiom expression="@cM2_axm2_2 CONTROL ⊆ TYPE"/>
+      <Axiom expression="@cM2_axm2_3 partition(TYPE, CONTROL, {DATA})"/>
+      <Axiom expression="@cM2_axm2_4 type ∈ PKT → TYPE"/>
+      <Axiom expression="@cM2_axm2_5 CTL_VAL = 0"/>
+      <Axiom expression="@cM1_axm0_9 BROADCAST = -1"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="ISensingUnit" type="EventComponent" description="Sensing unit control pattern">
+    <ContextRef name="Context_ISensingUnit"/>
+
+    <Variables>
+      <Variable name="ctlSensedFlg" type="ND \ Dests ↦ BOOL"/>
+      <Variable name="senseBuff" type="ND \ Dests ↦ ℙ(ℤ)"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pM3_MSensingUnit_sensing_inv_1 ctlSensedFlg ∈ ND \ Dests → BOOL"/>
+      <Invariant expression="@pM3_MSensingUnit_sensing_inv_2 senseBuff ∈ ND \ Dests → P(ℤ)"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MSensingUnit_sensing_int_1 ctlSensedFlg := (ND \ Dests) × {FALSE}"/>
+      <Action expression="@MSensingUnit_sensing_int_2 senseBuff := (ND \ Dests) × {∅}"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="sensing">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="sf" type="BOOL"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSensingUnit_sensing_g1 x ∈ ND \ Dests"/>
+          <Guard expression="@MSensingUnit_sensing_g2 sf ∈ BOOL"/>
+          <Guard expression="@MSensingUnit_sensing_g3 data ∈ ℤ"/>
+          <Guard expression="@MSensingUnit_sensing_g4 x ∈ dom(ctlSensedFlg) ∧ ctlSensedFlg(x) = FALSE"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSensingUnit_sensing_a1 ctlSensedFlg(x) = sf"/>
+          <Action expression="@MSensingUnit_sensing_a2 senseBuff(x) = senseBuff(x) ∪ {data}"/>
+        </Actions>
+      </Event>
+
+      <Event name="remove_senseBuff">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSensingUnit_removeSenseBuff_g1 senseBuff ≠ ∅ ∧ data ∈ senseBuff(x)"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MSensingUnit_removeSenseBuff_a1 senseBuff(x) := senseBuff(x) \ {data}"/>
+        </Actions>
+      </Event>
+
+      <Event name="creatingDataPacket">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="des" type="ℙ(ℤ)"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@User_defined_guard_g1 type(pkt) = DATA"/>
+        </Guards>
+      </Event>
+
+      <Event name="creatingControlPacket">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="des" type="ℙ(ℤ)"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@User_defined_guard_g1 data = CTL_VAL"/>
+          <Guard expression="@User_defined_guard_g2 type(pkt) ∈ CONTROL"/>
+        </Guards>
+        <Actions/>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

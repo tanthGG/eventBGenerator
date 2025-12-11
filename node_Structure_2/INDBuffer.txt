@@ -1,0 +1,67 @@
+machine INDBuffer sees Context_INDBuffer
+
+variables ndBuff
+
+invariants
+  theorem @typing_ndBuff ndBuff ∈ ℙ(ℤ × PKT)
+  @pMl_MNDBuffer_inv_1 ndBuff ∈ ND ↔ PKT
+
+events
+  event INITIALISATION
+    then
+      @MNDBuffer_int_1 ndBuff = ∅
+    end
+
+  event creatingPkt
+    any x des pkt data
+    where
+      theorem @typing_des des ∈ ℙ(ℤ)
+      theorem @typing_data data ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+      @MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)
+      @MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff
+    then
+      @MNDBuffMgt_record_ndBuff_al ndBuff = ndBuff ∪ {x ↦ pkt}
+    end
+
+  event start_tx
+    any x pkt
+    where
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MNDBuffer_remove_ndBuff_g1 x ↦ pkt ∈ ndBuff
+    then
+      @MNDBuffer_remove_ndBuff_al ndBuff = ndBuff \ {x ↦ pkt}
+    end
+
+  event fwdr_receive_pkt
+    any nb pkt
+    where
+      theorem @typing_nb nb ∈ ℤ
+      theorem @typing_pkt pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT
+      @MReceive_fwdr_receive_pkt_g4 nb ∈ Dests
+      @MNDBuffer_record_ndBuff_g1 nb ↦ pkt ∉ ndBuff
+    then
+      @MNDBuffer_record_ndBuff_al ndBuff = ndBuff ∪ {nb ↦ pkt}
+    end
+
+  event finish_tx_pkt
+    any x pkt
+    where
+      theorem @typing_pkt pkt ∈ PKT
+      theorem @typing_x x ∈ ℤ
+      @MSend_finish_tx_pkt_g1 x ∈ ND ∧ pkt ∈ PKT
+      @MNDBuffer_is_In_Range_ndBuff_g1 pkt ∈ ran(ndBuff)
+    end
+
+  event final_tx_pkt
+    any pkt
+    where
+      @MSend_final_tx_pkt_g1 pkt ∈ PKT
+      @MNDBuffer_isNot_In_Range_ndBuff_g1 pkt ∉ ran(ndBuff)
+    end
+end

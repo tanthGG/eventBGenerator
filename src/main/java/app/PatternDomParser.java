@@ -62,7 +62,7 @@ public class PatternDomParser {
     }
 
     PatternModel model = new PatternModel();
-    model.name = attrOr(patternEl, "name", model.name);
+    model.name = PatternNames.instantiate(attrOr(patternEl, "name", model.name));
 
     // Attach referenced context if present
     Element ctxRefEl = child(patternEl, "ContextRef");
@@ -183,6 +183,7 @@ public class PatternDomParser {
   private PatternModel parseLegacyPattern(Element root) {
     PatternModel model = new PatternModel();
     if (root.hasAttribute("name")) model.name = root.getAttribute("name").trim();
+    model.name = PatternNames.instantiate(model.name);
 
     // Context (optional, legacy inline)
     Element contextEl = child(root, "Context");
@@ -334,6 +335,7 @@ public class PatternDomParser {
       String multiVars = attr(aEl, "vars");
       String multiValues = attr(aEl, "values");
       String text = textOr(aEl, "");
+      String expressionAttr = attr(aEl, "expression");
 
       String assignment = null;
 
@@ -344,15 +346,28 @@ public class PatternDomParser {
           assignment = lhs + " ≔ " + rhs;
         }
       } else if (singleVar != null && !singleVar.isBlank()) {
-        String varName = singleVar.trim();
-        if (!varName.isEmpty() && !"skip".equalsIgnoreCase(varName)) {
-          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
-          if (rhs == null || rhs.isBlank()) rhs = "skip";
-          assignment = varName + " ≔ " + rhs;
+        String varAttr = singleVar.trim();
+        AssignmentOperator op = findAssignmentOperator(varAttr);
+        boolean hasInlineAssignment =
+            op.found()
+                && (singleValueAttr == null || singleValueAttr.isBlank())
+                && varAttr.substring(op.index + op.length).trim().length() > 0;
+        if (hasInlineAssignment) {
+          assignment = varAttr;
         } else {
-          String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
-          if (rhs != null && !rhs.isBlank() && !rhs.trim().equalsIgnoreCase("skip")) {
-            assignment = rhs;
+          if (op.found()) {
+            varAttr = varAttr.substring(0, op.index).trim();
+          }
+          String varName = varAttr;
+          if (!varName.isEmpty() && !"skip".equalsIgnoreCase(varName)) {
+            String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+            if (rhs == null || rhs.isBlank()) rhs = "skip";
+            assignment = varName + " ≔ " + rhs;
+          } else {
+            String rhs = (singleValueAttr != null && !singleValueAttr.isBlank()) ? singleValueAttr : text;
+            if (rhs != null && !rhs.isBlank() && !rhs.trim().equalsIgnoreCase("skip")) {
+              assignment = rhs;
+            }
           }
         }
       } else {
@@ -360,6 +375,10 @@ public class PatternDomParser {
         if (rhs != null && !rhs.isBlank()) {
           assignment = rhs;
         }
+      }
+
+      if ((assignment == null || assignment.isBlank()) && expressionAttr != null && !expressionAttr.isBlank()) {
+        assignment = expressionAttr.trim();
       }
 
       if (assignment == null || assignment.trim().equalsIgnoreCase("skip")) continue;
@@ -402,5 +421,33 @@ public class PatternDomParser {
     if (t == null) return def;
     t = t.trim();
     return t.isEmpty() ? def : t;
+  }
+
+  private static AssignmentOperator findAssignmentOperator(String text) {
+    if (text == null) return AssignmentOperator.NONE;
+    int colonIdx = text.indexOf(":=");
+    int unicodeIdx = text.indexOf('≔');
+    if (colonIdx >= 0 && (unicodeIdx < 0 || colonIdx < unicodeIdx)) {
+      return new AssignmentOperator(colonIdx, 2);
+    }
+    if (unicodeIdx >= 0) {
+      return new AssignmentOperator(unicodeIdx, 1);
+    }
+    return AssignmentOperator.NONE;
+  }
+
+  private static class AssignmentOperator {
+    static final AssignmentOperator NONE = new AssignmentOperator(-1, 0);
+    final int index;
+    final int length;
+
+    AssignmentOperator(int index, int length) {
+      this.index = index;
+      this.length = length;
+    }
+
+    boolean found() {
+      return index >= 0;
+    }
   }
 }

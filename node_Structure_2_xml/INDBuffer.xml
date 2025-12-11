@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PatternBundle name="INDBuffer_Bundle">
+
+  <Context name="Context_INDBuffer">
+    <Sets>
+      <Set name="PKT"/>
+    </Sets>
+
+    <Constants>
+      <Constant name="ND"/>
+      <Constant name="Dests"/>
+      <Constant name="initialSrcAddr"/>
+      <Constant name="finalDestAddr"/>
+    </Constants>
+
+    <Axioms>
+      <Axiom expression="@cM1_axm0_1 ND ⊆ ℕ"/>
+      <Axiom expression="@cM1_axm0_2 finite(ND)"/>
+      <Axiom expression="@cM1_axm0_3 Dests ⊆ ND"/>
+      <Axiom expression="@cM1_axm0_6 finite(PKT)"/>
+      <Axiom expression="@cM1_axm0_7 initialSrcAddr ∈ PKT → ND"/>
+      <Axiom expression="@cM1_axm0_10 finalDestAddr ∈ PKT → ND ∪ {BROADCAST}"/>
+    </Axioms>
+  </Context>
+
+  <Pattern name="INDBuffer" type="EventComponent" description="Non-destination buffer management pattern">
+    <ContextRef name="Context_INDBuffer"/>
+
+    <Variables>
+      <Variable name="ndBuff" type="ND ↔ PKT"/>
+    </Variables>
+
+    <Invariants>
+      <Invariant expression="@pMl_MNDBuffer_inv_1 ndBuff ∈ ND ↔ PKT"/>
+    </Invariants>
+
+    <Initialisation>
+      <Action expression="@MNDBuffer_int_1 ndBuff = ∅"/>
+    </Initialisation>
+
+    <Events>
+      <Event name="creatingPkt">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="des" type="ℙ(ℤ)"/>
+          <Param name="pkt" type="PKT"/>
+          <Param name="data" type="ℤ"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MPacket_creating_pkt_g1 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ"/>
+          <Guard expression="@MPacket_creating_pkt_g2 x = initialSrcAddr(pkt) ∧ des = ran({pkt} ◁ finalDestAddr)"/>
+          <Guard expression="@MNDBuffMgt_record_ndBuff_g1 x ↦ pkt ∉ ndBuff"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MNDBuffMgt_record_ndBuff_al ndBuff = ndBuff ∪ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="start_tx">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_start_tx_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MNDBuffer_remove_ndBuff_g1 x ↦ pkt ∈ ndBuff"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MNDBuffer_remove_ndBuff_al ndBuff := ndBuff \ {x ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="fwdr_receive_pkt">
+        <Parameters>
+          <Param name="nb" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g1 nb ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MReceive_fwdr_receive_pkt_g4 nb ∈ Dests"/>
+          <Guard expression="@MNDBuffer_record_ndBuff_g1 nb ↦ pkt ∉ ndBuff"/>
+        </Guards>
+        <Actions>
+          <Action expression="@MNDBuffer_record_ndBuff_al ndBuff := ndBuff ∪ {nb ↦ pkt}"/>
+        </Actions>
+      </Event>
+
+      <Event name="finish_tx_pkt">
+        <Parameters>
+          <Param name="x" type="ℤ"/>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_finish_tx_pkt_g1 x ∈ ND ∧ pkt ∈ PKT"/>
+          <Guard expression="@MNDBuffer_is_In_Range_ndBuff_g1 pkt ∈ ran(ndBuff)"/>
+        </Guards>
+      </Event>
+
+      <Event name="final_tx_pkt">
+        <Parameters>
+          <Param name="pkt" type="PKT"/>
+        </Parameters>
+        <Guards>
+          <Guard expression="@MSend_final_tx_pkt_g1 pkt ∈ PKT"/>
+          <Guard expression="@MNDBuffer_isNot_In_Range_ndBuff_g1 pkt ∉ ran(ndBuff)"/>
+        </Guards>
+      </Event>
+    </Events>
+  </Pattern>
+
+</PatternBundle>

@@ -7,7 +7,7 @@ public class PatternComposer {
 
   private final PatternCombinationEngine combinationEngine = new PatternCombinationEngine();
 
-  public PatternModel compose(List<PatternModel> models) {
+  public PatternModel compose(List<PatternModel> models, int refinementLevel) {
     if (models == null || models.isEmpty()) {
       throw new IllegalArgumentException("At least one pattern model is required for composition");
     }
@@ -17,7 +17,7 @@ public class PatternComposer {
     result.context = mergeContexts(models);
     mergeVariables(models, result);
     mergeInvariants(models, result);
-    mergeEvents(models, result);
+    mergeEvents(models, result, refinementLevel);
     return result;
   }
 
@@ -94,7 +94,7 @@ public class PatternComposer {
     }
   }
 
-  private void mergeEvents(List<PatternModel> models, PatternModel target) {
+  private void mergeEvents(List<PatternModel> models, PatternModel target, int refinementLevel) {
     PatternModel.Event initEvent = new PatternModel.Event();
     initEvent.name = "Initialisation";
     initEvent.sourcePattern = "Composite";
@@ -127,7 +127,8 @@ public class PatternComposer {
       }
     }
 
-    List<PatternModel.Event> processedEvents = combinationEngine.apply(collectedEvents);
+    List<PatternModel.Event> processedEvents =
+        combinationEngine.apply(collectedEvents, refinementLevel);
 
     Map<String, PatternModel.Event> eventsByName = new LinkedHashMap<>();
     Set<String> lowerCaseNames = new HashSet<>();

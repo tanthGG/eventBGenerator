@@ -1,12 +1,45 @@
 package app;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
 public class EventBMapper {
+  private static final Map<String, String> EVENT_REFINES =
+      Map.ofEntries(
+          Map.entry("creatingdatapacket", "creatingPkt"),
+          Map.entry("creatingcontrolpacket", "creatingPkt"));
+
+  private static final Set<String> EVENT_EXTENDS =
+      Set.of(
+          "start_tx",
+          "send_down",
+          "send_up",
+          "receive",
+          "fwdr_receive_pkt",
+          "dest_recv_pkt",
+          "clear_recvdbuff",
+          "finish_tx_pkt",
+          "final_tx_pkt",
+          "creatingdatapacket",
+          "creatingcontrolpacket");
+
   public EventBIR toEventB(PatternModel m, int refinement) {
     String baseName = (m.name != null && !m.name.isBlank()) ? m.name.trim() : "Pattern";
     int refIndex = Math.max(refinement, 0);
-    boolean includesPSensing = includesPattern(m, "PSensingUnit");
-    String ctxName = includesPSensing ? "Refine_Machine_C" + refIndex : baseName + "_C" + refIndex;
-    String machName = includesPSensing ? "Refine_Machine_M" + refIndex : baseName + "_M" + refIndex;
+    boolean includesPSensing = includesPattern(m, "PSensingUnit") || includesPattern(m, "MSensingUnit");
+    boolean allowExtends = includesPSensing;
+    int level = refIndex + 1;
+    String ctxName = "Context";
+    String machName = includesPSensing ? "uM" + level : "M" + level;
+    String parentMachine = null;
+    if (refIndex > 0) {
+      parentMachine = includesPSensing ? "M" + refIndex : "M" + refIndex;
+    }
 
     StringBuilder ctxSb = new StringBuilder();
     ctxSb.append("context ").append(ctxName).append("\n");
@@ -32,9 +65,8 @@ public class EventBMapper {
     // Axioms
     if (m.context != null && m.context.axioms != null && !m.context.axioms.isEmpty()) {
       ctxSb.append("axioms\n");
-      int ax = 0;
       for (String axiom : m.context.axioms) {
-        ctxSb.append(String.format("  @ax%02d %s\n", ++ax, axiom));
+        ctxSb.append("  ").append(axiom).append("\n");
       }
       ctxSb.append("\n");
     }
@@ -42,27 +74,34 @@ public class EventBMapper {
     ctxSb.append("end\n");
 
     StringBuilder sb = new StringBuilder();
-    sb.append("machine ").append(machName).append("\n")
-      .append("sees ").append(ctxName).append("\n\n");
+    sb.append("MACHINE ").append(machName).append("\n");
+    if (parentMachine != null) {
+      sb.append("REFINES ").append(parentMachine).append("\n");
+    }
+    sb.append("SEES ").append(ctxName).append("\n\n");
 
     // Variables
-    if (!m.variables.isEmpty()) {
-      sb.append("variables\n");
-      for (var v : m.variables) sb.append("  ").append(v.name).append("\n");
+    List<PatternModel.Variable> orderedVars = orderVariables(m.variables);
+    if (!orderedVars.isEmpty()) {
+      sb.append("VARIABLES\n");
+      for (var v : orderedVars) sb.append("  ").append(v.name).append("\n");
       sb.append("\n");
     }
 
     // Invariants
-    if (!m.invariants.isEmpty()) {
-      sb.append("invariants\n");
-      int i = 0;
-      for (var inv : m.invariants)
-        sb.append(String.format("  @inv%02d %s\n", ++i, inv.expression));
+    List<PatternModel.Invariant> orderedInvs = orderInvariants(m.invariants);
+    if (!orderedInvs.isEmpty()) {
+      sb.append("INVARIANTS\n");
+      for (var inv : orderedInvs) {
+        if (inv.expression != null && !inv.expression.isBlank()) {
+          sb.append("  ").append(inv.expression.trim()).append("\n");
+        }
+      }
       sb.append("\n");
     }
 
     // Events
-    sb.append("events\n");
+    sb.append("EVENTS\n");
 
     PatternModel.Event initEvent = null;
     for (var e : m.events) {
@@ -74,19 +113,34 @@ public class EventBMapper {
 
     if (initEvent != null) {
       sb.append("  event INITIALISATION\n");
+      if (refIndex > 0 && allowExtends) {
+        sb.append("    extends INITIALISATION\n");
+      }
       sb.append("    then\n");
-      int a = 0;
-      for (var ac : initEvent.actions)
-        sb.append(String.format("      @int%02d %s\n", ++a, ac.assignment));
-      if (a == 0) sb.append("      @int01 skip\n");
+      int actionCount = 0;
+      for (var ac : initEvent.actions) {
+        if (ac.assignment != null && !ac.assignment.isBlank()) {
+          sb.append("      ").append(ac.assignment).append("\n");
+          actionCount++;
+        }
+      }
+      if (actionCount == 0) sb.append("      skip\n");
       sb.append("  end\n\n");
     } else {
-      sb.append("  event INITIALISATION\n    then\n      @int01 skip\n  end\n\n");
+      sb.append("  event INITIALISATION\n");
+      if (refIndex > 0) {
+        sb.append("    extends INITIALISATION\n");
+      }
+      sb.append("    then\n      skip\n  end\n\n");
     }
 
     for (var e : m.events) {
       if (initEvent != null && e == initEvent) continue;
       sb.append("  event ").append(e.name).append("\n");
+      String clause = refinementClauseForEvent(e.name);
+      if (refIndex > 0 && allowExtends && clause != null) {
+        sb.append("    ").append(clause).append("\n");
+      }
       if (!e.params.isEmpty()) {
         sb.append("    any ");
         for (int i = 0; i < e.params.size(); i++) {
@@ -96,15 +150,16 @@ public class EventBMapper {
         sb.append("\n");
       }
 
-      int g = 0;
       StringBuilder guardSb = new StringBuilder();
       for (var p : e.params) {
         if (p.type != null && !p.type.isBlank() && !hasExplicitTypeGuard(e.guards, p.name, p.type)) {
-          guardSb.append(String.format("      @g%02d %s ∈ %s\n", ++g, p.name, p.type));
+          guardSb.append("      ").append(p.name).append(" ∈ ").append(p.type).append("\n");
         }
       }
       for (var gu : e.guards) {
-        guardSb.append(String.format("      @g%02d %s\n", ++g, gu.expr));
+        if (gu.expr != null && !gu.expr.isBlank()) {
+          guardSb.append("      ").append(gu.expr).append("\n");
+        }
       }
 
       if (guardSb.length() > 0) {
@@ -118,9 +173,11 @@ public class EventBMapper {
       }
 
       sb.append("    then\n");
-      int a = 0;
-      for (var ac : e.actions)
-        sb.append(String.format("      @a%02d %s\n", ++a, ac.assignment));
+      for (var ac : e.actions) {
+        if (ac.assignment != null && !ac.assignment.isBlank()) {
+          sb.append("      ").append(ac.assignment).append("\n");
+        }
+      }
       sb.append("  end\n\n");
     }
 
@@ -163,5 +220,75 @@ public class EventBMapper {
     }
 
     return false;
+  }
+
+  private static String refinementClauseForEvent(String eventName) {
+    if (eventName == null || eventName.isBlank()) return null;
+    String normalized = eventName.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+    if (EVENT_REFINES.containsKey(normalized)) {
+      return "refines " + EVENT_REFINES.get(normalized);
+    }
+    if (EVENT_EXTENDS.contains(normalized)) {
+      return "extends " + eventName;
+    }
+    return null;
+  }
+
+  private static final List<String> VARIABLE_ORDER =
+      List.of(
+          "pktFwdr",
+          "pktData",
+          "createdPkts",
+          "waitingBuff",
+          "sentDown",
+          "sentUp",
+          "destBuff",
+          "recvBuff",
+          "clrRecvBuffFlg");
+
+  private static final Map<String, Integer> VARIABLE_RANK;
+
+  static {
+    Map<String, Integer> ranks = new HashMap<>();
+    for (int i = 0; i < VARIABLE_ORDER.size(); i++) {
+      ranks.put(VARIABLE_ORDER.get(i), i);
+    }
+    VARIABLE_RANK = Map.copyOf(ranks);
+  }
+
+  private static List<PatternModel.Variable> orderVariables(List<PatternModel.Variable> variables) {
+    List<PatternModel.Variable> ordered = new ArrayList<>(variables);
+    ordered.sort(
+        Comparator.comparingInt((PatternModel.Variable v) -> rankVariable(v == null ? null : v.name))
+            .thenComparing(
+                (PatternModel.Variable v) -> v == null || v.name == null ? "" : v.name));
+    return ordered;
+  }
+
+  private static int rankVariable(String name) {
+    if (name == null) return Integer.MAX_VALUE;
+    Integer rank = VARIABLE_RANK.get(name.trim());
+    return rank != null ? rank : Integer.MAX_VALUE;
+  }
+
+  private static List<PatternModel.Invariant> orderInvariants(List<PatternModel.Invariant> invariants) {
+    List<PatternModel.Invariant> ordered = new ArrayList<>(invariants);
+    ordered.sort(
+        Comparator.comparingInt(
+                (PatternModel.Invariant inv) -> rankInvariant(inv == null ? null : inv.expression))
+            .thenComparing(
+                (PatternModel.Invariant inv) ->
+                    inv == null || inv.expression == null ? "" : inv.expression));
+    return ordered;
+  }
+
+  private static int rankInvariant(String expression) {
+    if (expression == null) return Integer.MAX_VALUE;
+    for (String var : VARIABLE_ORDER) {
+      if (expression.contains(var)) {
+        return rankVariable(var);
+      }
+    }
+    return Integer.MAX_VALUE;
   }
 }

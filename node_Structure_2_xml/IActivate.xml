@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<Pattern name="PActivate" type="EventComponent" description="Activation mechanism for emergency alert when sensed data exceeds safety threshold">
+  <Context name="Context_PActivate">
+    <Constants>
+      <Constant name="safetyThreshold"/>
+      <Constant name="BROADCAST"/>
+    </Constants>
+    <Axioms>
+      <Axiom expression="@cM3_axm0_1 safetyThreshold ∈ ℤ"/>
+      <Axiom expression="@cM3_axm0_2 BROADCAST = -1"/>
+    </Axioms>
+  </Context>
+
+  <Variables>
+    <Variable name="emergencyAlert" type="BOOL"/>
+  </Variables>
+
+  <Invariants>
+    <Invariant expression="emergencyAlert ∈ BOOL"/>
+  </Invariants>
+
+  <Events>
+
+    <Event name="Initialisation">
+      <Actions>
+        <Action var="@PActivate_inv_1 emergencyAlert := FALSE"/>
+      </Actions>
+    </Event>
+
+    <Event name="actuating">
+      <Parameters>
+        <Param name="data" type="ℤ"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="data ∈ ℤ"/>
+        <Guard expression="data ≥ safetyThreshold"/>
+        <Guard expression="emergencyAlert = FALSE"/>
+      </Guards>
+      <Actions>
+        <Action var="emergencyAlert :=" value="TRUE"/>
+      </Actions>
+    </Event>
+
+    <Event name="no_actuating">
+      <Parameters>
+        <Param name="data" type="ℤ"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="data ∈ ℤ"/>
+        <Guard expression="data &lt; safetyThreshold"/>
+      </Guards>
+    </Event>
+
+    <Event name="reset_actuatingStatus">
+      <Parameters>
+        <Param name="data" type="ℤ"/>
+      </Parameters>
+      <Guards>
+        <Guard expression="data ≥ safetyThreshold"/>
+        <Guard expression="emergencyAlert = TRUE"/>
+      </Guards>
+      <Actions>
+        <Action var="emergencyAlert :=" value="FALSE"/>
+      </Actions>
+    </Event>
+
+  </Events>
+</Pattern>

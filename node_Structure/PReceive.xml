@@ -26,12 +26,12 @@
 
     <Variables>
       <Variable name="recvBuff" type="ND ↔ PKT"/>
-      <Variable name="clrRecvBuffFlg" type="ND ↔ PKT"/>
+      <Variable name="clrRecvBuffFlg" type="PKT ↔ ND"/>
     </Variables>
 
     <Invariants>
       <Invariant expression="recvBuff ∈ ND ↔ PKT"/>
-      <Invariant expression="clrRecvBuffFlg ∈ ND ↔ PKT"/>
+      <Invariant expression="clrRecvBuffFlg ∈ PKT ↔ ND"/>
     </Invariants>
 
     <Initialisation>
@@ -74,18 +74,18 @@
 
       <Event name="dest_recv_pkts">
         <Parameters>
-          <Param name="x" type="ND"/>
+          <Param name="nb" type="ND"/>
           <Param name="pkt" type="PKT"/>
         </Parameters>
         <Guards>
-          <Guard expression="x ∈ ND"/>
+          <Guard expression="nb ∈ ND"/>
           <Guard expression="pkt ∈ PKT"/>
-          <Guard expression="x ↦ pkt ∈ recvBuff"/>
-          <Guard expression="x ∈ Dests"/>
-          <Guard expression="x ↦ pkt ∉ clrRecvBuffFlg"/>
+          <Guard expression="nb ↦ pkt ∈ recvBuff"/>
+          <Guard expression="nb ∈ Dests"/>
+          <Guard expression="nb ↦ pkt ∉ clrRecvBuffFlg"/>
         </Guards>
         <Actions>
-          <Action var="clrRecvBuffFlg" value="clrRecvBuffFlg ∪ {x ↦ pkt}"/>
+          <Action var="clrRecvBuffFlg" value="clrRecvBuffFlg ∪ {nb ↦ pkt}"/>
         </Actions>
       </Event>
 

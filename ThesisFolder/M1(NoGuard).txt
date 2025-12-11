@@ -1,0 +1,177 @@
+MACHINE pM1
+SEES cM1
+
+VARIABLES
+  pktFwdr
+  pktData
+  createdPkts
+  waitingBuff
+  sentDown
+  sentUp
+  ctlNeighbours
+  destBuff
+  recvBuff
+  clrRecvBuffFlg
+
+INVARIANTS
+  @inv01 pktFwdr ∈ PKT ⇸ ND
+  @inv02 pktData ∈ PKT ⇸ ℤ
+  @inv03 createdPkts ⊆ PKT
+  @inv04 waitingBuff ∈ ND ↔ PKT
+  @inv05 sentUp ∈ ND ↔ PKT
+  @inv06 sentDown ∈ ND ↔ PKT
+  @inv07 ctlNeighbours ∈ PKT ↔ ND
+  @inv08 destBuff ∈ Dests ↔ PKT
+  @inv09 recvBuff ∈ ND ↔ PKT
+  @inv10 clrRecvBuffFlg ∈ ND ↔ PKT
+
+EVENTS
+  Initialisation
+    begin
+      @int01 pktFwdr ≔ ∅
+      @int02 pktData ≔ ∅
+      @int03 createdPkts ≔ ∅
+      @int04 waitingBuff ≔ ∅
+      @int05 sentUp ≔ ∅
+      @int06 sentDown ≔ ∅
+      @int07 ctlNeighbours ≔ ∅
+      @int08 destBuff ≔ ∅
+      @int09 recvBuff ≔ ∅
+      @int10 clrRecvBuffFlg ≔ ∅
+    end
+
+Event creatingPkt ≙
+any
+  x
+  des
+  pkt
+  data
+where
+  @g01 x ∈ ND \ Dests ∧ pkt ∈ PKT ∧ data ∈ ℤ
+  @g02 x = initialSrc(pkt) ∧ des = ran({pkt} ◁ finalDest)
+  @g04 pkt ∉ dom(pktFwdr)
+  @g05 pkt ∉ dom(pktData)
+  @g06 x ↦ pkt ∉ waitingBuff
+then
+  @a01 createdPkts := createdPkts ∪ {pkt}
+  @a02 pktFwdr := pktFwdr ∪ {pkt ↦ x}
+  @a03 pktData := pktData ∪ {pkt ↦ data}
+  @a04 waitingBuff := waitingBuff ∪ {x ↦ pkt}
+end
+
+Event start_tx ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∉ sentDown
+  @g03 pkt ∈ dom(pktFwdr)
+  @g04 x ↦ pkt ∈ waitingBuff
+then
+  @a01 sentDown := sentDown ∪ {x ↦ pkt}
+  @a02 pktFwdr ≔ pktFwdr ⩤ {pkt ↦ x}
+  @a03 waitingBuff := waitingBuff \ {x ↦ pkt}
+end
+
+Event send_down ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∈ sentDown
+then
+  skip
+end
+
+Event send_up ≙
+any
+  x
+  pkt
+  nbrs
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∉ sentUp
+  @g03 x ↦ pkt ∈ sentDown
+  @g04 pkt ∉ dom(ctlNeighbours)
+  @g05 nbrs ∈ {n ∣ n ∈ ℙ(ND)} ∧ nbrs ≠ ∅
+then
+  @a01 ctlNeighbours := ctlNeighbours ∪ ({pkt} × nbrs)
+  @a02 sentDown := sentDown \ {x ↦ pkt}
+  @a03 sentUp := sentUp ∪ {x ↦ pkt}
+end
+
+Event receive ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∉ recvBuff
+  @g03 x ↦ pkt ∉ sentUp
+  @g04 x ↦ pkt ∉ sentDown
+  @g05 pkt ↦ x ∉ ctlNeighbours
+then
+  @a01 recvBuff := recvBuff ∪ {x ↦ pkt}
+  @a02 ctlNeighbours := ctlNeighbours \ {pkt ↦ x}
+end
+
+Event clear_recvdBuff ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∈ recvBuff
+  @g03 x ↦ pkt ∈ clrRecvBuffFlg
+then
+  @a01 recvBuff := recvBuff \ {x ↦ pkt}
+end
+
+Event fwdr_receive_pkt ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 x ↦ pkt ∈ recvBuff
+  @g03 x ↦ pkt ∉ clrRecvBuffFlg
+  @g04 x ∉ Dests
+  @g05 x ↦ pkt ∉ waitingBuff
+then
+  @a01 clrRecvBuffFlg := clrRecvBuffFlg ∪ {x ↦ pkt}
+  @a02 waitingBuff := waitingBuff ∪ {x ↦ pkt}
+end
+
+Event dest_recv_pkt ≙
+any
+  nb
+  pkt
+where
+  @g01 nb ∈ ND ∧ pkt ∈ PKT
+  @g02 nb ↦ pkt ∈ recvBuff
+  @g03 nb ∈ Dests
+  @g04 nb ↦ pkt ∉ clrRecvBuffFlg
+  @g05 nb ↦ pkt ∉ destBuff
+then
+  @a01 destBuff := destBuff ∪ {nb ↦ pkt}
+  @a02 clrRecvBuffFlg := clrRecvBuffFlg ∪ {nb ↦ pkt}
+end
+
+Event finish_tx_pkt ≙
+any
+  x
+  pkt
+where
+  @g01 x ∈ ND ∧ pkt ∈ PKT
+  @g02 {pkt} ◁ ctlNeighbours = ∅
+  @g03 pkt ∈ ran(sentUp) ∧ pkt ∉ ran(sentDown)
+  @g04 x ∈ dom(sentUp)
+  @g05 x ↦ pkt ∈ sentUp
+  @g06 pkt ∈ ran(waitingBuff)
+then
+  @a01 sentUp := sentUp \ {x ↦ pkt}
+end
+
+END
